@@ -83,6 +83,33 @@ def get_base64_image(image_path):
 loc_icon = get_base64_image(r"Data\location.png")
 search_icon = get_base64_image(r"Data\search.png")
 
+def get_condition_image_base64(icon_code):
+    mapping = {
+        '01d': 'sunny.png',
+        '01n': 'clear night.png',
+        '02d': 'partly-cloudy.png',
+        '02n': 'partly-cloudy.png',
+        '03d': 'cloudy.png',
+        '03n': 'cloudy.png',
+        '04d': 'cloudy.png',
+        '04n': 'cloudy.png',
+        '09d': 'light-rain.png',
+        '09n': 'light-rain.png',
+        '10d': 'light-rain.png',
+        '10n': 'light-rain.png',
+        '11d': 'thunderstorm.png',
+        '11n': 'thunderstorm.png',
+        '13d': 'snowflake.png',
+        '13n': 'snowflake.png',
+        '50d': 'fog.png',
+        '50n': 'fog.png'
+    }
+    filename = mapping.get(icon_code, 'sunny.png')
+    try:
+        return get_base64_image(rf"Data\condition\{filename}")
+    except:
+        return ""
+
 def get_weather(city):
     url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
     return requests.get(url).json()
@@ -258,6 +285,7 @@ else:
     # WEATHER CARD
     with col1:
         icon = data['weather'][0]['icon']
+        icon_b64 = get_condition_image_base64(icon)
         desc = data['weather'][0]['description'].title()
         temp = int(data['main']['temp'])
         pressure = data['main']['pressure']
@@ -272,7 +300,7 @@ else:
                     <div style="font-size: 14px; margin-top: 5px; color: #555;">{desc}</div>
                 </div>
                 <div>
-                    <img src="http://openweathermap.org/img/wn/{icon}@4x.png" width="120" style="margin-top: -10px;">
+                    <img src="data:image/png;base64,{icon_b64}" width="120" style="margin-top: -10px;">
                 </div>
             </div>
             <div style="display: flex; gap: 10px; margin-top: 25px;">
@@ -371,12 +399,13 @@ else:
             dt_obj = datetime.datetime.strptime(d['dt_txt'], '%Y-%m-%d %H:%M:%S')
             date_str = dt_obj.strftime('%d %b')
             icon = d['weather'][0]['icon']
+            icon_b64 = get_condition_image_base64(icon)
             temp = int(d['main']['temp'])
             desc = d['weather'][0]['main']
             html_boxes += f"""
             <div style="flex:1; background:#89c2d9; padding:15px 5px; border-radius:12px; text-align:center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
                 <div style="font-size:12px; color:#333; margin-bottom:8px; font-weight:500;">{date_str}</div>
-                <img src="http://openweathermap.org/img/wn/{icon}@2x.png" width="40" style="margin-bottom:8px;">
+                <img src="data:image/png;base64,{icon_b64}" width="40" style="margin-bottom:8px;">
                 <div style="font-weight:bold; color:#dc3545; font-size:16px;">{temp}°C</div>
                 <div style="font-size:11px; color:#666; margin-top:5px;">{desc}</div>
             </div>
