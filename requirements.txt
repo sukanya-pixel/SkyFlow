@@ -1,3 +1,5 @@
 streamlit
 requests
 geocoder
+python-dotenv
+matplotlib

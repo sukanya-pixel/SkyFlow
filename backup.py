@@ -12,7 +12,11 @@ st.markdown("""
 <style>
 
 body {
-    background-color: #f5f7fb;
+    background-color: #013a63;
+}
+
+.stApp {
+    background-color: #013a63;
 }
 
 .block-container {
@@ -78,6 +82,37 @@ def get_base64_image(image_path):
 
 loc_icon = get_base64_image(r"Data\location.png")
 search_icon = get_base64_image(r"Data\search.png")
+gps_icon = get_base64_image(r"Data\gps.png")
+wind_icon = get_base64_image(r"Data\wind.png")
+sunrise_icon = get_base64_image(r"Data\sunrise.png")
+sunset_icon = get_base64_image(r"Data\sunset.png")
+
+def get_condition_image_base64(icon_code):
+    mapping = {
+        '01d': 'sunny.png',
+        '01n': 'clear night.png',
+        '02d': 'partly-cloudy.png',
+        '02n': 'partly-cloudy.png',
+        '03d': 'cloudy.png',
+        '03n': 'cloudy.png',
+        '04d': 'cloudy.png',
+        '04n': 'cloudy.png',
+        '09d': 'light-rain.png',
+        '09n': 'light-rain.png',
+        '10d': 'light-rain.png',
+        '10n': 'light-rain.png',
+        '11d': 'thunderstorm.png',
+        '11n': 'thunderstorm.png',
+        '13d': 'snowflake.png',
+        '13n': 'snowflake.png',
+        '50d': 'fog.png',
+        '50n': 'fog.png'
+    }
+    filename = mapping.get(icon_code, 'sunny.png')
+    try:
+        return get_base64_image(rf"Data\condition\{filename}")
+    except:
+        return ""
 
 def get_weather(city):
     url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
@@ -139,11 +174,20 @@ div.stButton > button {
     margin-right:0;
 }
 
+/* MAIN CARDS CSS FIX */
+div[data-testid="column"]:has(.card-marker) {
+    background: white;
+    padding: 20px !important;
+    border-radius: 25px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
 </style>
 """, unsafe_allow_html=True)
 
 # HEADER BLOCK
-col1, col2 = st.columns([10,1])
+
+col1, col2 = st.columns([40,1])
 
 with col1:
     st.markdown(f"""
@@ -151,7 +195,7 @@ with col1:
         display:flex;
         align-items:center;
         gap:8px;
-        font-size:18px;
+        font-size:20px;
         font-weight:500;
         padding-bottom:15px
     ">
@@ -161,22 +205,77 @@ with col1:
     """, unsafe_allow_html=True)
 
 with col2:
-    clicked = st.markdown(f"""
-    <div style="display:flex; justify-content:flex-end;">
-        <button style="
-            border:none;
-            background:transparent;
-            cursor:pointer;
-        " onclick="window.location.reload()">
-            <img src="data:image/png;base64,{search_icon}" width="20">
-        </button>
-    </div>
+    st.markdown(f"""
+    <style>
+    /* Anchor to the entire header card so we can perfectly right-align */
+    div[data-testid="stHorizontalBlock"]:has(.header-marker) {{
+        position: relative !important;
+    }}
+    /* Remove paddings from the button wrapper */
+    div[data-testid="stHorizontalBlock"]:has(.header-marker) div.stButton {{
+        padding: 0 !important;
+        margin: 0 !important;
+    }}
+    
+    /* Position the button relative to the header card itself */
+    div[data-testid="stHorizontalBlock"]:has(.header-marker) button {{
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        width: 20px !important;
+        height: 20px !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        padding: 0 !important;
+        position: absolute !important;
+        transform: translateY(-50%) !important;
+        margin: 0 !important;
+    }}
+    div[data-testid="stHorizontalBlock"]:has(.header-marker) button:hover {{
+        background: transparent !important;
+        border: none !important;
+    }}
+    div[data-testid="stHorizontalBlock"]:has(.header-marker) button:focus {{
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }}
+    div[data-testid="stHorizontalBlock"]:has(.header-marker) button:active {{
+        background: transparent !important;
+        border: none !important;
+    }}
+    /* Render image OVER the transparent button */
+    div[data-testid="stHorizontalBlock"]:has(.header-marker) button::after {{
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: url("data:image/png;base64,{search_icon}");
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        pointer-events: none;
+    }}
+    /* Hide button text */
+    div[data-testid="stHorizontalBlock"]:has(.header-marker) button p {{
+        display: none !important;
+    }}
+    </style>
     """, unsafe_allow_html=True)
+    if st.button("\u200B", key="search_btn"):
+        st.session_state.search = not st.session_state.search
+
 # ---------------- SEARCH ----------------
-if st.session_state.search:
-    new_city = st.text_input("Search city")
+def submit_search():
+    new_city = st.session_state.search_input.strip()
     if new_city:
         st.session_state.city = new_city
+        st.session_state.search = False
+
+if st.session_state.search:
+    st.text_input("Search city and press Enter", key="search_input", on_change=submit_search)
 
 
 city = st.session_state.city
@@ -190,110 +289,198 @@ if str(data.get("cod")) != "200":
 else:
 
     # ---------------- MAIN CARDS ----------------
-    st.markdown("<div style='height:70px;'></div>", unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns([2,2,1], gap="large")
+    col1, col2, col3 = st.columns([1.8, 1.4, 1.2], gap="large")
 
     # WEATHER CARD
     with col1:
-        st.markdown('<div class="card-marker"></div>', unsafe_allow_html=True)
-        st.markdown(f"### 📍 {city}")
-        st.markdown(f"<h1 style='margin:0'>{data['main']['temp']}°C</h1>", unsafe_allow_html=True)
-        st.write(data['weather'][0]['description'])
-
         icon = data['weather'][0]['icon']
-        st.image(f"http://openweathermap.org/img/wn/{icon}@2x.png", width=100)
-
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Pressure", f"{data['main']['pressure']} mb")
-        c2.metric("Visibility", f"{data['visibility']/1000} km")
-        c3.metric("Humidity", f"{data['main']['humidity']}%")
-
+        icon_b64 = get_condition_image_base64(icon)
+        desc = data['weather'][0]['description'].title()
+        temp = int(data['main']['temp'])
+        pressure = data['main']['pressure']
+        visibility = data['visibility'] // 1000
+        humidity = data['main']['humidity']
+        st.markdown(f"""
+        <div style="background: #89c2d9; padding: 25px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; height: 260px; display: flex; flex-direction: column; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between;">
+                <div>
+                    <div style="font-weight: 600; font-size: 18px; margin-bottom: 5px; color: #111; display: flex; align-items: center; gap: 6px;">
+                        <img src="data:image/png;base64,{gps_icon}" width="24"> {city}
+                    </div>
+                    <div style="font-size: 48px; font-weight: bold; line-height: 1.2; color: #111;">{temp}°<span style="font-size: 24px;">C</span></div>
+                    <div style="font-size: 16px; margin-top: 5px; color: #555;">{desc}</div>
+                </div>
+                <div>
+                    <img src="data:image/png;base64,{icon_b64}" width="120" style="margin-top: -10px;">
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 25px;">
+                <div style="flex: 1; border: 1px solid #eee; border-radius: 8px; padding: 5px; text-align: center;">
+                    <div style="font-size: 14px; color: #666;">Pressure</div>
+                    <div style="font-size: 22px; color: #0d6efd; font-weight: 800;">{pressure} mb</div>
+                </div>
+                <div style="flex: 1; border: 1px solid #eee; border-radius: 8px; padding: 5px; text-align: center;">
+                    <div style="font-size: 14px; color: #666;">Visibility</div>
+                    <div style="font-size: 22px; color: #0d6efd; font-weight: 800;">{visibility} km</div>
+                </div>
+                <div style="flex: 1; border: 1px solid #eee; border-radius: 8px; padding: 5px; text-align: center;">
+                    <div style="font-size: 14px; color: #666;">Humidity</div>
+                    <div style="font-size: 22px; color: #0d6efd; font-weight: 800;">{humidity}%</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     # WIND CARD
     with col2:
-        st.markdown('<div class="card-marker"></div>', unsafe_allow_html=True)
-        st.markdown("### 🌬️ Wind Info")
-        st.markdown(f"<h1>{data['wind']['speed']} m/s</h1>", unsafe_allow_html=True)
-
-        st.write("Wind Speed")
-        st.progress(min(int(data['wind']['speed'] * 10), 100))
-
+        speed = data['wind']['speed']
+        pct = min(int(speed * 10), 100)
+        st.markdown(f"""
+        <div style="background: #89c2d9; padding: 25px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; height: 260px; display: flex; flex-direction: column;">
+            <div style="font-weight: 600; font-size: 18px; margin-bottom: 20px; color: #111; display: flex; align-items: center; gap: 8px;"><img src="data:image/png;base64,{wind_icon}" width="24"> Wind Info</div>
+            <div style="font-size: 42px; font-weight: bold; color: #0d6efd; line-height: 1;">{speed} <span style="font-size: 24px; font-weight: 500;">m/s</span></div>
+            <div style="font-size: 16px; margin-top: auto; margin-bottom: 8px; color: #555;">Wind Speed</div>
+            <div style="width: 100%; background-color: #e9ecef; border-radius: 4px; height: 10px; margin-bottom: 10px;">
+                <div style="width: {pct}%; background-color: #0d6efd; height: 10px; border-radius: 4px;"></div>
+            </div>
+            <div style="font-size: 20px; font-weight: 600; color: #111;">{pct}%</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     # SUN CARD
     with col3:
-        st.markdown('<div class="card-marker"></div>', unsafe_allow_html=True)
-        sunrise = datetime.datetime.fromtimestamp(data['sys']['sunrise'])
-        sunset = datetime.datetime.fromtimestamp(data['sys']['sunset'])
-
-        st.write("🌅 Sunrise:", sunrise.strftime('%H:%M'))
-        st.write("🌇 Sunset:", sunset.strftime('%H:%M'))
-
-    # ---------------- GRAPH ----------------
-    temps = []
-    times = []
-
-    for i in range(min(8, len(forecast['list']))):
-        item = forecast['list'][i]
-        temps.append(item['main']['temp'])
-        times.append(item['dt_txt'][11:16])
+        sunrise = datetime.datetime.fromtimestamp(data['sys']['sunrise']).strftime('%H:%M')
+        sunset = datetime.datetime.fromtimestamp(data['sys']['sunset']).strftime('%H:%M')
         
-    graph_col, = st.columns(1)
-    with graph_col:
-        st.markdown('<div class="card-marker"></div>', unsafe_allow_html=True)
-        st.markdown("### 📈 Temperature Trend (Next 24 Hours)")
-
-        plt.figure(figsize=(8,4))
-        plt.plot(times, temps, marker='o')
-        plt.xticks(rotation=45)
-        plt.grid()
-
-        st.pyplot(plt)
-
-    # ---------------- FORECAST ----------------
-    st.markdown("### 📅 5-Day Forecast")
-
-    cols = st.columns(5)
-
-    for i in range(min(5, len(forecast['list']) // 8)):
-        d = forecast['list'][i*8]
-        with cols[i]:
-            st.markdown(f"""
-            <div style="
-                background:white;
-                padding:15px;
-                border-radius:12px;
-                text-align:center;
-                box-shadow:0 3px 8px rgba(0,0,0,0.08);
-            ">
-                <b>{d['dt_txt'][:10]}</b><br><br>
-                🌡️ {d['main']['temp']}°C<br>
-                {d['weather'][0]['main']}
+        st.markdown(f"""
+        <div style="background: #89c2d9; padding: 25px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; height: 260px; display: flex; flex-direction: column; justify-content: center;">
+            <div>
+                <div style="font-size: 18px; margin-bottom: 8px; font-weight: 500; color: #111; display: flex; align-items: center; gap: 8px;"><img src="data:image/png;base64,{sunrise_icon}" width="24"> Sunrise:</div>
+                <div style="font-size: 28px; font-weight: bold; padding-left: 32px; color: #111;">{sunrise}</div>
             </div>
-            """, unsafe_allow_html=True)
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
+            <div>
+                <div style="font-size: 18px; margin-bottom: 8px; font-weight: 500; color: #111; display: flex; align-items: center; gap: 8px;"><img src="data:image/png;base64,{sunset_icon}" width="24"> Sunset:</div>
+                <div style="font-size: 28px; font-weight: bold; padding-left: 32px; color: #111;">{sunset}</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ---------------- GRAPH & FORECAST ROW ----------------
+    st.markdown("<div style='height:30px;'></div>", unsafe_allow_html=True)
+    
+    t1, t2 = st.columns([1.3, 1], gap="large")
+    with t1:
+        st.markdown("<div style='font-weight: 600; font-size: 16px; color: #111; margin-bottom: -10px;'>📈 Temperature Trend (Next 24 Hours)</div>", unsafe_allow_html=True)
+    with t2:
+        st.markdown("<div style='font-weight: 600; font-size: 16px; color: #111; margin-bottom: -10px;'>📅 5-Day Forecast</div>", unsafe_allow_html=True)
+        
+    st.markdown("<div style='height:15px;'></div>", unsafe_allow_html=True)
+
+    r2c1, r2c2 = st.columns([1.3, 1], gap="large")
+    
+    with r2c1:
+        st.markdown('<div class="card-marker"></div>', unsafe_allow_html=True)
+        tz_offset = datetime.timedelta(seconds=data['timezone'])
+        
+        # Collect raw points (timestamp, temp)
+        raw_points = [(data['dt'], data['main']['temp'])]
+        for item in forecast['list']:
+            if item['dt'] > data['dt']:
+                raw_points.append((item['dt'], item['main']['temp']))
+                if len(raw_points) >= 8:
+                    break
+                    
+        # Linearly interpolate a point in between each consecutive pair
+        interpolated_points = []
+        for i in range(len(raw_points)):
+            interpolated_points.append(raw_points[i])
+            if i < len(raw_points) - 1:
+                dt1, temp1 = raw_points[i]
+                dt2, temp2 = raw_points[i+1]
+                mid_dt = (dt1 + dt2) / 2
+                mid_temp = (temp1 + temp2) / 2
+                interpolated_points.append((mid_dt, mid_temp))
+                
+        temps = []
+        tick_positions = []
+        tick_labels = []
+        
+        for idx, (dt, temp) in enumerate(interpolated_points):
+            temps.append(temp)
+            if idx % 2 == 0:
+                time_local = datetime.datetime.fromtimestamp(dt, datetime.timezone.utc) + tz_offset
+                tick_labels.append(time_local.strftime('%H:%M'))
+                tick_positions.append(idx)
+            
+        fig, ax = plt.subplots(figsize=(8,3.5))
+        ax.plot(range(len(temps)), temps, marker='o', color='#0d6efd', linewidth=2)
+        ax.set_facecolor('white')
+        fig.patch.set_facecolor('white')
+        ax.grid(axis='y', linestyle='-', alpha=0.3)
+        ax.grid(axis='x', linestyle='-', alpha=0.3)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_visible(False)
+        ax.spines['bottom'].set_color('#ddd')
+        ax.set_xticks(tick_positions)
+        ax.set_xticklabels(tick_labels, fontsize=9, color='#666')
+        ax.tick_params(axis='x', length=0, pad=2)
+        plt.yticks(fontsize=9, color='#666')
+        ax.set_ylabel('°C', color='#666', rotation=0, labelpad=15)
+        st.pyplot(fig)
+        
+    with r2c2:
+        html_boxes = "<div style='display:flex; gap:10px; justify-content:space-between;'>"
+        for i in range(min(5, len(forecast['list']) // 8)):
+            d = forecast['list'][i*8]
+            dt_obj = datetime.datetime.strptime(d['dt_txt'], '%Y-%m-%d %H:%M:%S')
+            date_str = dt_obj.strftime('%d %b')
+            icon = d['weather'][0]['icon']
+            icon_b64 = get_condition_image_base64(icon)
+            temp = int(d['main']['temp'])
+            desc = d['weather'][0]['main']
+            html_boxes += f"""
+            <div style="flex:1; background:#89c2d9; padding:15px 5px; border-radius:12px; text-align:center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
+                <div style="font-size:12px; color:#333; margin-bottom:8px; font-weight:500;">{date_str}</div>
+                <img src="data:image/png;base64,{icon_b64}" width="40" style="margin-bottom:8px;">
+                <div style="font-weight:bold; color:#dc3545; font-size:16px;">{temp}°C</div>
+                <div style="font-size:11px; color:#666; margin-top:5px;">{desc}</div>
+            </div>
+            """
+        html_boxes += "</div>"
+        st.markdown(html_boxes, unsafe_allow_html=True)
 
     # ---------------- EXTRA ----------------
-    st.markdown("### 🌍 Additional Details")
-
-    colA, colB, colC = st.columns([2,2,2])
-
-    with colA:
-        st.write(f"🌡️ Feels Like: {data['main']['feels_like']} °C")
-        st.write(f"👁️ Visibility: {data['visibility']} m")
-
-    with colB:
-        st.write(f"☁️ Cloud Cover: {data['clouds']['all']}%")
-
-    with colC:
-        if data['main']['temp'] > 30:
-            st.markdown("""
-            <div style="
-                background:#fff4e5;
-                padding:15px;
-                border-radius:10px;
-                color:#a85b00;
-                font-weight:500;
-            ">
-            ⚠️ Warm Alert: Stay hydrated!
+    st.markdown("<div style='height:30px;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='font-weight: 600; font-size: 16px; margin-bottom: 10px;'>🌍 Additional Details</div>", unsafe_allow_html=True)
+    
+    warm_alert = ""
+    if data['main']['temp'] > 30:
+        warm_alert = """
+        <div>
+            <div style="background: rgba(255, 165, 0, 0.15); padding:10px 20px; border-radius:8px; color:#ff9800; font-size:14px; font-weight:600; display:flex; align-items:center; gap:8px;">
+                ⚠️ Warm Alert: Stay hydrated!
             </div>
-            """, unsafe_allow_html=True)
+        </div>
+        """
+        
+    st.markdown(f"""
+    <div style="background:#89c2d9; border-radius:12px; padding:20px 30px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display:flex; justify-content:space-between; align-items:center; border: 1px solid #f0f0f0;">
+        <div style="display: flex; gap: 40px; align-items:center;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:24px;">🌡️</span> 
+                <span style="font-size:14px; color:#333;">Feels Like: <b>{data['main']['feels_like']} °C</b></span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <span style="font-size:24px; color:#0d6efd;">👁️</span> 
+                <span style="font-size:14px; color:#333;">Visibility: <b>{data['visibility']} m</b></span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; border-left: 1px solid #eee; padding-left: 40px; margin-right: auto; margin-left: 40px;">
+                <span style="font-size:24px;">☁️</span> 
+                <span style="font-size:14px; color:#333;">Cloud Cover: <b>{data['clouds']['all']}%</b></span>
+            </div>
+        </div>
+        {warm_alert}
+    </div>
+    """, unsafe_allow_html=True)
