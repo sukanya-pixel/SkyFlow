@@ -25,6 +25,16 @@ body {
 .stApp {
     background-color: #013a63;
 }
+
+/* HIDE SCROLLBARS GLOBALLY */
+::-webkit-scrollbar {
+    display: none !important;
+}
+* {
+    -ms-overflow-style: none !important;  /* IE and Edge */
+    scrollbar-width: none !important;  /* Firefox */
+}
+
 /* REMOVE STREAMLIT TOP BAR SPACE */
 [data-testid="stHeader"] {
     display: none;
@@ -207,14 +217,14 @@ div[data-testid="stHorizontalBlock"]:has(.header-marker) {
     box-shadow: none !important;
     padding: 0 !important;
     margin-top: 0px !important;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     align-items: center !important;
     width: 100% !important;
 }
 
 /* APP TITLE CONTAINER CSS */
 div[data-testid="stElementContainer"]:has(.app-title) {
-    margin-bottom: -53px !important;
+    margin-bottom: -25px !important;
 }
 </style>
 """, unsafe_allow_html=True)
