@@ -18,12 +18,24 @@ st.markdown("""
 html, body, [class*="css"], [class*="st-"], .stApp, .stApp * {
     font-family: 'Outfit', sans-serif !important;
 }
+html, body {
+    overflow: hidden !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
 body {
     background-color: #013a63;
 }
 
 .stApp {
     background-color: #013a63;
+    overflow: hidden !important;
+    height: 100vh !important;
+}
+
+[data-testid="stAppViewContainer"], [data-testid="stMain"], .block-container {
+    overflow: hidden !important;
 }
 
 /* HIDE SCROLLBARS GLOBALLY */
