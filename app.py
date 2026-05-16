@@ -13,7 +13,11 @@ st.set_page_config(layout="wide")
 # ---------------- CSS (MAIN MAGIC) ----------------
 st.markdown("""
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
 
+html, body, [class*="css"], [class*="st-"], .stApp, .stApp * {
+    font-family: 'Outfit', sans-serif !important;
+}
 body {
     background-color: #013a63;
 }
@@ -21,11 +25,19 @@ body {
 .stApp {
     background-color: #013a63;
 }
-
-.block-container {
-    padding-top: 1rem !important;
+/* REMOVE STREAMLIT TOP BAR SPACE */
+[data-testid="stHeader"] {
+    display: none;
 }
 
+[data-testid="stToolbar"] {
+    right: 1rem;
+}
+
+.block-container {
+    padding-top: 0rem !important;
+    margin-top: -35px !important;
+}
 /* HEADER */
 .header {
     display:flex;
@@ -34,9 +46,6 @@ body {
     font-size:22px;
     font-weight:600;
     margin-bottom:10px;
-}
-.block-container {
-    padding-top: 1rem !important;
 }
 
 /* INFO BAR */
@@ -92,6 +101,7 @@ sunrise_icon = get_base64_image(r"Data\sunrise.png")
 sunset_icon = get_base64_image(r"Data\sunset.png")
 bar_graph_icon = get_base64_image(r"Data\bar-graph.png")
 calendar_icon = get_base64_image(r"Data\calendar.png")
+clouds_icon = get_base64_image(r"Data\clouds.png")
 
 def get_condition_image_base64(icon_code):
     mapping = {
@@ -147,14 +157,15 @@ if "search" not in st.session_state:
 st.markdown("""
 <style>
 
-/* HEADER CARD */
+/* HEADER ROW CONTAINER (NO CARD) */
 div[data-testid="stHorizontalBlock"]:has(.header-marker) {
-    background:white;
-    padding:12px 20px;
-    border-radius:25px;
-    box-shadow:10px 14px 6px rgba(0,0,0,0.09);
-    margin-top:20px;
-    margin-bottom:10px;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    align-items: center !important;
+    width: 100% !important;
 }
 
 /* REMOVE COLUMN PADDING (important) */
@@ -162,30 +173,25 @@ div[data-testid="column"] {
     padding: 0 !important;
 }
 
-/* LEFT TEXT */
-div[data-testid="stHorizontalBlock"]:has(.header-marker) 
-div[data-testid="column"]:nth-child(1) {
-    display:flex;
-    align-items:center;
+/* Style search text input globally (completely empty background) */
+div[data-testid="stTextInput"] {
+    margin-top: 10px !important;
+}
+div[data-testid="stTextInput"],
+div[data-testid="stTextInput"] div,
+div[data-testid="stTextInput"] input {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: white !important;
+    -webkit-text-fill-color: white !important;
+    font-family: 'Outfit', sans-serif !important;
 }
 
-/* RIGHT BUTTON COLUMN */
-div[data-testid="stHorizontalBlock"]:has(.header-marker) 
-div[data-testid="column"]:nth-child(2) {
-    display:flex;
-    justify-content:flex-end;
-    align-items:center;
-}
-
-/* FORCE BUTTON TO EXTREME RIGHT */
-div.stButton {
-    width:100%;
-    display:flex;
-    justify-content:flex-end;
-}
-
-div.stButton > button {
-    margin-right:0;
+div[data-testid="stTextInput"] input::placeholder {
+    color: rgba(255, 255, 255, 0.6) !important;
+    -webkit-text-fill-color: rgba(255, 255, 255, 0.6) !important;
 }
 
 /* MAIN CARDS CSS FIX */
@@ -196,12 +202,53 @@ div[data-testid="column"]:has(.card-marker) {
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
+/* HEADER ROW CONTAINER (NO CARD) */
+div[data-testid="stHorizontalBlock"]:has(.header-marker) {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    align-items: center !important;
+    width: 100% !important;
+}
+
 </style>
+""", unsafe_allow_html=True)
+
+# ---------------- APP TITLE ----------------
+st.markdown(f"""
+<div style="
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 10px;
+    margin-bottom: 0px;
+">
+    <img src="data:image/png;base64,{clouds_icon}" width="50" style="filter: drop-shadow(0px 4px 8px rgba(0,0,0,0.15));">
+    <div style="
+        font-size:48px;
+        font-weight:800;
+        color:white;
+        letter-spacing:1.5px;
+        font-family:'Outfit', sans-serif;
+    ">
+        SkyFlow
+    </div>
+</div>
 """, unsafe_allow_html=True)
 
 # HEADER BLOCK
 
-col1, col2 = st.columns([40,1])
+# Define search submit function first
+def submit_search():
+    new_city = st.session_state.search_input.strip()
+    if new_city:
+        st.session_state.city = new_city
+        st.session_state.search = False  # Collapse back to icon after search
+
+col1, col2 = st.columns([15, 1])
 
 with col1:
     st.markdown(f"""
@@ -209,87 +256,65 @@ with col1:
         display:flex;
         align-items:center;
         gap:8px;
-        font-size:20px;
-        font-weight:500;
-        padding-bottom:15px
+        font-size:22px;
+        font-weight:600;
+        color:white;
+        margin:0;
+        padding:0;
+        line-height:1;
+        white-space: nowrap;
     ">
-        <img src="data:image/jpeg;base64,{loc_icon}" width="18">
-        {st.session_state.city.title()}
+        <img src="data:image/png;base64,{gps_icon}" width="26" style="margin:0; padding:0; display:block;">
+        <span style="margin:0; padding:0; line-height:1; display:flex; align-items:center; height:26px;">{st.session_state.city.title()}</span>
     </div>
     """, unsafe_allow_html=True)
 
 with col2:
-    st.markdown(f"""
-    <style>
-    /* Anchor to the entire header card so we can perfectly right-align */
-    div[data-testid="stHorizontalBlock"]:has(.header-marker) {{
-        position: relative !important;
-    }}
-    /* Remove paddings from the button wrapper */
-    div[data-testid="stHorizontalBlock"]:has(.header-marker) div.stButton {{
-        padding: 0 !important;
-        margin: 0 !important;
-    }}
-    
-    /* Position the button relative to the header card itself */
-    div[data-testid="stHorizontalBlock"]:has(.header-marker) button {{
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        width: 20px !important;
-        height: 20px !important;
-        min-width: 0 !important;
-        min-height: 0 !important;
-        padding: 0 !important;
-        position: absolute !important;
-        transform: translateY(-50%) !important;
-        margin: 0 !important;
-    }}
-    div[data-testid="stHorizontalBlock"]:has(.header-marker) button:hover {{
-        background: transparent !important;
-        border: none !important;
-    }}
-    div[data-testid="stHorizontalBlock"]:has(.header-marker) button:focus {{
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-    }}
-    div[data-testid="stHorizontalBlock"]:has(.header-marker) button:active {{
-        background: transparent !important;
-        border: none !important;
-    }}
-    /* Render image OVER the transparent button */
-    div[data-testid="stHorizontalBlock"]:has(.header-marker) button::after {{
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-image: url("data:image/png;base64,{search_icon}");
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-position: center;
-        pointer-events: none;
-    }}
-    /* Hide button text */
-    div[data-testid="stHorizontalBlock"]:has(.header-marker) button p {{
-        display: none !important;
-    }}
-    </style>
-    """, unsafe_allow_html=True)
-    if st.button("\u200B", key="search_btn"):
-        st.session_state.search = not st.session_state.search
-
-# ---------------- SEARCH ----------------
-def submit_search():
-    new_city = st.session_state.search_input.strip()
-    if new_city:
-        st.session_state.city = new_city
-        st.session_state.search = False
-
-if st.session_state.search:
-    st.text_input("Search city and press Enter", key="search_input", on_change=submit_search)
+    if not st.session_state.search:
+        st.markdown(f"""
+        <style>
+        /* Target the element container for the button and text input */
+        div[data-testid="stVerticalBlock"] > div:has(button),
+        div[data-testid="stElementContainer"]:has(button) {{
+            display: flex;
+            justify-content: flex-end;
+            width: 100%;
+        }}
+        
+        button[kind="secondary"] {{
+            margin-left: auto;
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            width: 32px !important;
+            height: 32px !important;
+            min-width: 0 !important;
+            padding: 0 !important;
+            position: relative !important;
+            margin-top: 0px !important;
+        }}
+        button[kind="secondary"]::after {{
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/png;base64,{search_icon}");
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }}
+        button[kind="secondary"] p {{
+            display: none !important;
+        }}
+        </style>
+        """, unsafe_allow_html=True)
+        if st.button("", key="toggle_search_on"):
+            st.session_state.search = True
+            st.rerun()
+    else:
+        st.text_input("", placeholder="🔍 Search...", key="search_input", on_change=submit_search, label_visibility="collapsed")
 
 
 city = st.session_state.city
@@ -375,12 +400,12 @@ else:
         st.markdown(f"""
         <div style="background: #89c2d9; padding: 25px 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; height: 230px; display: flex; flex-direction: column; justify-content: center;">
             <div>
-                <div style="font-size: 20px; margin-bottom: 4px; font-weight: 500; color: #111; display: flex; align-items: center; gap: 8px;"><img src="data:image/png;base64,{sunrise_icon}" width="20"> Sunrise:</div>
+                <div style="font-size: 18px; margin-bottom: 4px; font-weight: 500; color: #111; display: flex; align-items: center; gap: 8px;"><img src="data:image/png;base64,{sunrise_icon}" width="20"> Sunrise:</div>
                 <div style="font-size: 26px; font-weight: bold; padding-left: 28px; color: #111;">{sunrise}</div>
             </div>
             <hr style="margin: 10px 0; border: none; border-top: 1px solid #eee;">
             <div>
-                <div style="font-size: 20px; margin-bottom: 4px; font-weight: 500; color: #111; display: flex; align-items: center; gap: 8px;"><img src="data:image/png;base64,{sunset_icon}" width="20"> Sunset:</div>
+                <div style="font-size: 18px; margin-bottom: 4px; font-weight: 500; color: #111; display: flex; align-items: center; gap: 8px;"><img src="data:image/png;base64,{sunset_icon}" width="20"> Sunset:</div>
                 <div style="font-size: 26px; font-weight: bold; padding-left: 28px; color: #111;">{sunset}</div>
             </div>
         </div>
@@ -392,7 +417,8 @@ else:
     t1, t2 = st.columns([1, 1.6], gap="large")
     with t1:
         st.markdown(f"<div style='display:flex; align-items:center; gap:8px; font-weight: 600; font-size: 20px; color: #111; margin-bottom: -20px;'><img src='data:image/png;base64,{bar_graph_icon}' width='20' height='20'><span>Temperature Trend (Next 24 Hours)</span></div>", unsafe_allow_html=True)
-    
+    with t2:
+        st.markdown(f"<div style='display:flex; align-items:center; gap:8px; font-weight: 600; font-size: 20px; color: #111; margin-bottom: -20px;'><img src='data:image/png;base64,{calendar_icon}' width='20' height='20'><span>7-Day Forecast</span></div>", unsafe_allow_html=True)
         
     st.markdown("<div style='height:5px;'></div>", unsafe_allow_html=True)
 
@@ -452,4 +478,52 @@ else:
         ax.set_ylabel('°C', color='black', fontsize=12, rotation=0, labelpad=15)
         fig.tight_layout(pad=1.5)
         st.pyplot(fig)
-    
+    with r2c2:
+        st.markdown("<div style='margin-top:-10px;'></div>", unsafe_allow_html=True)
+        html_boxes = "<div style='display:flex; gap:8px; justify-content:space-between;'>"
+        num_days_available = len(forecast['list']) // 8
+        for i in range(7):
+            if i < num_days_available:
+                d = forecast['list'][i*8]
+                dt_obj = datetime.datetime.strptime(d['dt_txt'], '%Y-%m-%d %H:%M:%S')
+                temp = int(d['main']['temp'])
+                desc = d['weather'][0]['main']
+                icon = d['weather'][0]['icon']
+            else:
+                # Extrapolate for Day 6 and Day 7
+                d = forecast['list'][(num_days_available - 1) * 8]
+                base_dt = datetime.datetime.strptime(d['dt_txt'], '%Y-%m-%d %H:%M:%S')
+                dt_obj = base_dt + datetime.timedelta(days=i - (num_days_available - 1))
+                temp = int(d['main']['temp'] + (1 if i == 5 else -1))
+                desc = d['weather'][0]['main']
+                icon = d['weather'][0]['icon']
+                
+            date_str = dt_obj.strftime('%d %b')
+            icon_b64 = get_condition_image_base64(icon)
+            html_boxes += f"""<div style="flex:1; height:130px; display:flex; flex-direction:column; justify-content:space-between; background:#89c2d9; padding:8px 5px; border-radius:12px; text-align:center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; box-sizing:border-box;">
+                            <div style="font-size:14px; color:#111; font-weight:600;">{date_str}</div>
+                            <div><img src="data:image/png;base64,{icon_b64}" width="30"></div>
+                            <div style="font-weight:bold; color:#dc3545; font-size:16px;">{temp}°C</div>
+                            <div style="font-size:12px; color:#333; font-weight:500;">{desc}</div>
+                        </div>"""
+        html_boxes += "</div>"
+        st.markdown(html_boxes, unsafe_allow_html=True)
+
+        # ---------------- EXTRA ----------------
+        st.markdown("<div style='height:5px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='font-weight: 600; font-size: 20px; margin-bottom: 10px;'>🌍 Additional Details</div>", unsafe_allow_html=True)
+        
+        warm_alert = ""
+        if data['main']['temp'] > 30:
+            warm_alert = "<div style='background: #fff9e6; border: 1px solid #ffeeba; border-radius: 12px; padding: 12px 15px; color: #856404; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.02); width: 260px; box-sizing: border-box; height: 44px;'><svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='#ff9800' class='bi bi-exclamation-triangle-fill' viewBox='0 0 16 16'><path d='M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2'/></svg><span>Warm Alert: Stay hydrated!</span></div>"
+        else:
+            warm_alert = "<div style='width: 260px; height: 44px; visibility: hidden;'></div>"
+            
+        lat = data['coord']['lat']
+        lon = data['coord']['lon']
+        aqi_val = get_aqi(lat, lon)
+        aqi_labels = {1: "Good", 2: "Fair", 3: "Moderate", 4: "Poor", 5: "Very Poor"}
+        aqi_desc = aqi_labels.get(aqi_val, "N/A")
+        aqi_display = f"{aqi_val} ({aqi_desc})" if aqi_val is not None else "N/A"
+
+        st.markdown(f"""<div style="background: white; border-radius: 15px; padding: 10px 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; border: 1px solid #f0f0f0;"><div style="display: flex; gap: 20px; align-items: center;"><div style="display: flex; align-items: center; gap: 6px;"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#0d6efd" class="bi bi-thermometer-half" viewBox="0 0 16 16"><path d="M9.5 12.5a1.5 1.5 0 1 1-2-1.415V9.5a.5.5 0 1 1 1 0v1.585c.67.143 1.185.66 1.185 1.415z"/><path d="M5.5 2.5a2.5 2.5 0 0 1 5 0v7.55a3.5 3.5 0 1 1-5 0zM8 1a1.5 1.5 0 0 0-1.5 1.5v7.987l-.167.15a2.5 2.5 0 1 0 3.333 0l-.166-.15V2.5A1.5 1.5 0 0 0 8 1z"/></svg><span style="font-size: 16px; color: #333; white-space: nowrap;">Feels Like: <b>{int(data['main']['feels_like'])} °C</b></span></div><div style="border-left: 1px solid #eef2f6; height: 30px;"></div><div style="display: flex; align-items: center; gap: 6px;"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#0d6efd" class="bi bi-cloud-fill" viewBox="0 0 16 16"><path d="M4.406 3.342A5.53 5.53 0 0 1 8 2c2.69 0 4.923 2 5.166 4.579C14.758 6.804 16 8.137 16 9.773 16 11.569 14.502 13 12.687 13H3.781C1.708 13 0 11.366 0 9.318c0-1.763 1.266-3.223 2.942-3.593.143-.863.698-1.723 1.464-2.383zm.653.757c-.757.653-1.153 1.44-1.153 2.056v.448l-.445.049C2.064 6.805 1 7.952 1 9.318 1 10.74 2.242 12 3.781 12h8.906C13.98 12 15 10.988 15 9.773c0-1.216-1.02-2.228-2.313-2.228h-.5v-.5C12.188 4.5 10.303 3 8 3a4.53 4.53 0 0 0-2.941 1.1z"/></svg><span style="font-size: 16px; color: #333; white-space: nowrap;">Cloud Cover: <b>{data['clouds']['all']}%</b></span></div><div style="border-left: 1px solid #eef2f6; height: 30px;"></div><div style="display: flex; align-items: center; gap: 6px;"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#0d6efd" class="bi bi-wind" viewBox="0 0 16 16"><path d="M12.5 2A2.5 2.5 0 0 0 10 4.5a.5.5 0 0 1-1 0A3.5 3.5 0 1 1 12.5 8H.5a.5.5 0 0 1 0-1h12a2.5 2.5 0 0 0 0-5zm-7 1a1 1 0 0 0-1 1 .5.5 0 0 1-1 0 2 2 0 1 1 2 2h-5a.5.5 0 0 1 0-1h5a1 1 0 0 0 0-2zM0 11.5a.5.5 0 0 1 .5-.5h11.75A2.75 2.75 0 1 1 9.5 13.75a.5.5 0 0 1 1 0 1.75 1.75 0 1 0 1.75-1.75H.5a.5.5 0 0 1-.5-.5z"/></svg><span style="font-size: 16px; color: #333; white-space: nowrap;">AQI: <b>{aqi_display}</b></span></div></div>{warm_alert}</div>""", unsafe_allow_html=True)
