@@ -250,7 +250,7 @@ st.markdown(f"""
     justify-content: center;
     gap: 15px;
     margin-top: 10px;
-    margin-bottom: 0px;
+    margin-bottom: 15px;
 ">
     <img src="data:image/png;base64,{clouds_icon}" width="50" style="filter: drop-shadow(0px 4px 8px rgba(0,0,0,0.15));">
     <div style="
@@ -352,7 +352,7 @@ with col2:
             right: 0 !important;
             top: 50% !important;
             transform: translateY(-50%) !important;
-            width: 680px !important;
+            width: 480px !important;
             z-index: 100;
         }}
         /* Ensure the inner Streamlit wrappers stretch fully and have no padding */
@@ -362,11 +362,11 @@ with col2:
             padding: 0 !important;
             overflow: visible !important;
         }}
-        /* Style the baseweb wrapper to create the white box */
+        /* Style the baseweb wrapper to create the invisible box */
         div[data-testid="stHorizontalBlock"]:has(.header-marker) div[data-baseweb="input"] {{
-            background-color: white !important;
-            border-radius: 20px !important;
-            border: 1px solid #ccc !important;
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
             height: 32px !important;
             min-height: 32px !important;
             box-sizing: border-box !important;
@@ -374,7 +374,7 @@ with col2:
         }}
         /* Style the input text */
         div[data-testid="stHorizontalBlock"]:has(.header-marker) input {{
-            color: #333 !important;
+            color: white !important;
             padding: 0 15px !important;
             background: transparent !important;
             border: none !important;
@@ -420,7 +420,7 @@ else:
         humidity = data['main']['humidity']
         precip_prob = int(forecast['list'][0].get('pop', 0) * 100)
         st.markdown(f"""
-        <div style="background: #89c2d9; padding: 25px 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; height: 230px; display: flex; flex-direction: column; justify-content: space-between;">
+        <div style="background: #61a5c2; padding: 25px 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; height: 230px; display: flex; flex-direction: column; justify-content: space-between;">
             <div style="display: flex; justify-content: space-between;">
                 <div>
                     <div style="font-size: 50px; font-weight: bold; line-height: 1.1; color: #111;">{temp}°<span style="font-size: 20px;">C</span></div>
@@ -457,7 +457,7 @@ else:
         speed = data['wind']['speed']
         pct = min(int(speed * 10), 100)
         st.markdown(f"""
-        <div style="background: #89c2d9; padding: 25px 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; height: 230px; display: flex; flex-direction: column;">
+        <div style="background: #61a5c2; padding: 25px 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; height: 230px; display: flex; flex-direction: column;">
             <div style="font-weight: 600; font-size: 18px; margin-bottom: 10px; color: #111; display: flex; align-items: center; gap: 8px;"><img src="data:image/png;base64,{wind_icon}" width="20"> Wind Info</div>
             <div style="font-size: 34px; margin-top: 10px; font-weight: bold; color: #0d6efd; line-height: 1;">{speed} <span style="font-size: 18px; font-weight: 500;">m/s</span></div>
             <div style="font-size: 16px; margin-top: 20px; margin-bottom: 4px; color: #555;">Wind Speed</div>
@@ -474,7 +474,7 @@ else:
         sunset = datetime.datetime.fromtimestamp(data['sys']['sunset']).strftime('%H:%M')
          
         st.markdown(f"""
-        <div style="background: #89c2d9; padding: 25px 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; height: 230px; display: flex; flex-direction: column; justify-content: center;">
+        <div style="background: #468FAF; padding: 25px 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #f0f0f0; height: 230px; display: flex; flex-direction: column; justify-content: center;">
             <div>
                 <div style="font-size: 18px; margin-bottom: 4px; font-weight: 500; color: #111; display: flex; align-items: center; gap: 8px;"><img src="data:image/png;base64,{sunrise_icon}" width="20"> Sunrise:</div>
                 <div style="font-size: 26px; font-weight: bold; padding-left: 28px; color: #111;">{sunrise}</div>
