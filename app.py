@@ -233,6 +233,15 @@ div[data-testid="stTextInput"] input::placeholder {
     -webkit-text-fill-color: rgba(255, 255, 255, 0.6) !important;
 }
 
+/* DYNAMIC CARD HOVER EFFECT */
+.dynamic-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+}
+.dynamic-card:hover {
+    transform: translateY(-5px) !important;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2) !important;
+}
+
 /* MAIN CARDS CSS FIX */
 div[data-testid="column"]:has(.card-marker) {
     background: white;
@@ -268,11 +277,11 @@ st.markdown(f"""
     justify-content: center;
     gap: 15px;
     margin-top: 10px;
-    margin-bottom: 10px;
+    margin-bottom: -5px;
 ">
     <img src="data:image/png;base64,{clouds_icon}" width="50" style="filter: drop-shadow(0px 4px 8px rgba(0,0,0,0.15));">
     <div style="
-        font-size:48px;
+        font-size:58px;
         font-weight:800;
         color:White;
         letter-spacing:1.5px;
@@ -438,7 +447,7 @@ else:
         humidity = data['main']['humidity']
         precip_prob = int(forecast['list'][0].get('pop', 0) * 100)
         st.markdown(f"""
-        <div style="background: #89C2D9; padding: 25px 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); height: 230px; display: flex; flex-direction: column; justify-content: space-between;">
+        <div class="dynamic-card" style="background: #89C2D9; padding: 25px 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); height: 230px; display: flex; flex-direction: column; justify-content: space-between;">
             <div style="display: flex; justify-content: space-between;">
                 <div>
                     <div style="font-size: 50px; font-weight: bold; line-height: 1.1; color: #012A4A;">{temp}°<span style="font-size: 20px;">C</span></div>
@@ -450,19 +459,19 @@ else:
                 </div>
             </div>
             <div style="display: flex; gap: 8px; margin-top: 10px;">
-                <div style="flex: 1; background: #014F86; border-radius: 8px; padding: 6px 4px; text-align: center; height: 62px; display: flex; flex-direction: column; justify-content: center;">
+                <div class="dynamic-card" style="flex: 1; background: #014F86; border-radius: 8px; padding: 6px 4px; text-align: center; height: 62px; display: flex; flex-direction: column; justify-content: center;">
                     <div style="font-size: 14px; color: #A9D6E5; white-space: nowrap;">Pressure</div>
                     <div style="font-size: 15px; color: white; font-weight: 800;">{pressure} mb</div>
                 </div>
-                <div style="flex: 1; background: #014F86; border-radius: 8px; padding: 6px 4px; text-align: center; height: 62px; display: flex; flex-direction: column; justify-content: center;">
+                <div class="dynamic-card" style="flex: 1; background: #014F86; border-radius: 8px; padding: 6px 4px; text-align: center; height: 62px; display: flex; flex-direction: column; justify-content: center;">
                     <div style="font-size: 14px; color: #A9D6E5; white-space: nowrap;">Visibility</div>
                     <div style="font-size: 15px; color: white; font-weight: 800;">{visibility} km</div>
                 </div>
-                <div style="flex: 1; background: #014F86; border-radius: 8px; padding: 6px 4px; text-align: center; height: 62px; display: flex; flex-direction: column; justify-content: center;">
+                <div class="dynamic-card" style="flex: 1; background: #014F86; border-radius: 8px; padding: 6px 4px; text-align: center; height: 62px; display: flex; flex-direction: column; justify-content: center;">
                     <div style="font-size: 14px; color: #A9D6E5; white-space: nowrap;">Humidity</div>
                     <div style="font-size: 15px; color: white; font-weight: 800;">{humidity}%</div>
                 </div>
-                <div style="flex: 1; background: #014F86; border-radius: 8px; padding: 6px 4px; text-align: center; height: 62px; display: flex; flex-direction: column; justify-content: center;">
+                <div class="dynamic-card" style="flex: 1; background: #014F86; border-radius: 8px; padding: 6px 4px; text-align: center; height: 62px; display: flex; flex-direction: column; justify-content: center;">
                     <div style="font-size: 14px; color: #A9D6E5; white-space: nowrap;">Precipitation</div>
                     <div style="font-size: 15px; color: white; font-weight: 800;">{precip_prob}%</div>
                 </div>
@@ -475,7 +484,7 @@ else:
         speed = data['wind']['speed']
         pct = min(int(speed * 10), 100)
         st.markdown(f"""
-        <div style="background: #89C2D9; padding: 25px 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); height: 230px; display: flex; flex-direction: column;">
+        <div class="dynamic-card" style="background: #89C2D9; padding: 25px 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); height: 230px; display: flex; flex-direction: column;">
             <div style="font-weight: 600; font-size: 18px; margin-bottom: 10px; color: #014F86; display: flex; align-items: center; gap: 8px;"><img src="data:image/png;base64,{wind_icon}" width="30"> Wind Info</div>
             <div style="font-size: 34px; margin-top: 10px; font-weight: bold; color: #012A4A; line-height: 1;">{speed} <span style="font-size: 18px; font-weight: 500;">m/s</span></div>
             <div style="font-size: 16px; margin-top: 20px; margin-bottom: 4px; color: #014F86;">Wind Speed</div>
@@ -492,7 +501,7 @@ else:
         sunset = datetime.datetime.fromtimestamp(data['sys']['sunset']).strftime('%H:%M')
          
         st.markdown(f"""
-        <div style="background: #89C2D9; padding: 25px 40px; border-radius: 16px; height: 230px; display: flex; flex-direction: column; justify-content: center;">
+        <div class="dynamic-card" style="background: #89C2D9; padding: 25px 40px; border-radius: 16px; height: 230px; display: flex; flex-direction: column; justify-content: center;">
             <div>
                 <div style="font-size: 18px; margin-bottom: 4px; font-weight: 500; color: #014F86; display: flex; align-items: center; gap: 8px;"><img src="data:image/png;base64,{sunrise_icon}" width="30"> Sunrise:</div>
                 <div style="font-size: 26px; font-weight: bold; padding-left: 28px; color: #012A4A;">{sunrise}</div>
@@ -594,7 +603,7 @@ else:
                 
             date_str = dt_obj.strftime('%d %b')
             icon_b64 = get_condition_image_base64(icon)
-            html_boxes += f"""<div style="flex:1; height:130px; display:flex; flex-direction:column; justify-content:space-between; background:#89c2d9; padding:8px 5px; border-radius:12px; text-align:center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); box-sizing:border-box;">
+            html_boxes += f"""<div class="dynamic-card" style="flex:1; height:130px; display:flex; flex-direction:column; justify-content:space-between; background:#89c2d9; padding:8px 5px; border-radius:12px; text-align:center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); box-sizing:border-box;">
                             <div style="font-size:14px; color:#01497C; font-weight:600;">{date_str}</div>
                             <div><img src="data:image/png;base64,{icon_b64}" width="30"></div>
                             <div style="font-weight:bold; color:#012A4A; font-size:18px;">{temp}°C</div>
@@ -609,7 +618,7 @@ else:
         
         warm_alert = ""
         if data['main']['temp'] > 30:
-            warm_alert = "<div style='background: #fff9e6; border: 1px solid #ffeeba; border-radius: 12px; padding: 12px 15px; color: #856404; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.02); width: 260px; box-sizing: border-box; height: 44px;'><svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='#ff9800' class='bi bi-exclamation-triangle-fill' viewBox='0 0 16 16'><path d='M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2'/></svg><span>Warm Alert: Stay hydrated!</span></div>"
+            warm_alert = "<div style='background: #fff9e6; border: 1px solid #ffeeba; border-radius: 12px; padding: 12px 15px; color: #856404; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.02); width: 250px; box-sizing: border-box; height: 44px;'><svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='#ff9800' class='bi bi-exclamation-triangle-fill' viewBox='0 0 16 16'><path d='M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2'/></svg><span>Warm Alert: Stay hydrated!</span></div>"
         else:
             warm_alert = "<div style='width: 260px; height: 44px; visibility: hidden;'></div>"
             
@@ -630,7 +639,7 @@ else:
         aqi_display = f"{aqi_val} ({aqi_desc})" if aqi_val is not None else "N/A"
 
         st.markdown(f"""
-        <div style="background: #89C2D9; border-radius: 15px; padding: 10px 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
+        <div class="dynamic-card" style="background: #89C2D9; border-radius: 15px; padding: 10px 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
         <div style="display: flex; gap: 10px; align-items: center;">
         <div style="display: flex; align-items: center; gap: 6px;">
         <img src="data:image/png;base64,{temperature_icon_new}" width="25" height="25">
