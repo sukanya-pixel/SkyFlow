@@ -25,11 +25,11 @@ html, body {
     padding: 0 !important;
 }
 body {
-    background-color: #013a63;
+    background-color: #012a4a;
 }
 
 .stApp {
-    background-color: #013a63;
+    background-color: #012a4a;
     overflow: hidden !important;
     height: 100vh !important;
 }
@@ -274,7 +274,10 @@ def submit_search():
         st.session_state.city = new_city
         st.session_state.search = False  # Collapse back to icon after search
 
-col1, col2 = st.columns([15, 1])
+if not st.session_state.search:
+    col1, col2 = st.columns([15, 1])
+else:
+    col1, col2 = st.columns([1, 1])
 
 with col1:
     st.markdown(f"""
@@ -344,38 +347,43 @@ with col2:
         st.markdown(f"""
         <style>
         /* Absolute position the active search input container to flush right */
-        div[data-testid="stHorizontalBlock"]:has(.header-marker) > div[data-testid="column"]:last-child div[data-testid="stElementContainer"]:has(input) {{
+        div[data-testid="stHorizontalBlock"]:has(.header-marker) div[data-testid="stElementContainer"]:has(input) {{
             position: absolute !important;
             right: 0 !important;
             top: 50% !important;
             transform: translateY(-50%) !important;
             width: 680px !important;
             z-index: 100;
-            margin: 0 !important;
-            padding: 0 !important;
         }}
         /* Ensure the inner Streamlit wrappers stretch fully and have no padding */
-        div[data-testid="stHorizontalBlock"]:has(.header-marker) > div[data-testid="column"]:last-child div.stTextInput div {{
+        div[data-testid="stHorizontalBlock"]:has(.header-marker) div[data-testid="stElementContainer"]:has(input) div {{
             width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
+            overflow: visible !important;
         }}
-        /* Style the input box itself */
-        div[data-testid="stHorizontalBlock"]:has(.header-marker) > div[data-testid="column"]:last-child div.stTextInput input {{
+        /* Style the baseweb wrapper to create the white box */
+        div[data-testid="stHorizontalBlock"]:has(.header-marker) div[data-baseweb="input"] {{
+            background-color: white !important;
             border-radius: 20px !important;
             border: 1px solid #ccc !important;
-            padding: 0 15px !important;
-            background-color: white !important;
-            color: #333 !important;
-            width: 100% !important;
-            min-height: 32px !important;
             height: 32px !important;
-            margin: 0 !important;
+            min-height: 32px !important;
             box-sizing: border-box !important;
+            overflow: hidden !important;
+        }}
+        /* Style the input text */
+        div[data-testid="stHorizontalBlock"]:has(.header-marker) input {{
+            color: #333 !important;
+            padding: 0 15px !important;
+            background: transparent !important;
+            border: none !important;
+            height: 32px !important;
+            width: 100% !important;
         }}
         /* Hide labels and instructions to prevent extra layout padding */
-        div[data-testid="stHorizontalBlock"]:has(.header-marker) > div[data-testid="column"]:last-child label,
-        div[data-testid="stHorizontalBlock"]:has(.header-marker) > div[data-testid="column"]:last-child div[data-testid="InputInstructions"] {{
+        div[data-testid="stHorizontalBlock"]:has(.header-marker) label,
+        div[data-testid="stHorizontalBlock"]:has(.header-marker) div[data-testid="InputInstructions"] {{
             display: none !important;
             margin: 0 !important;
             height: 0 !important;
