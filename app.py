@@ -126,7 +126,6 @@ clouds_icon = get_base64_image(r"Data\clouds.png")
 earth_icon = get_base64_image(r"Data\earth.png")
 temperature_icon_new = get_base64_image(r"Data\temperature.png")
 cloud_icon_new = get_base64_image(r"Data\Cloud.png")
-windy_icon_new = get_base64_image(r"Data\windy.png")
 
 def get_condition_image_base64(icon_code):
     mapping = {
@@ -167,7 +166,22 @@ def get_aqi(lat, lon):
     url = f"https://api.openweathermap.org/data/2.5/air_pollution?lat={lat}&lon={lon}&appid={API_KEY}"
     try:
         res = requests.get(url).json()
-        return res['list'][0]['main']['aqi']
+        pm25 = res['list'][0]['components']['pm2_5']
+        
+        if pm25 <= 12.0:
+            return int(round(((50 - 0) / (12.0 - 0)) * (pm25 - 0) + 0))
+        elif pm25 <= 35.4:
+            return int(round(((100 - 51) / (35.4 - 12.1)) * (pm25 - 12.1) + 51))
+        elif pm25 <= 55.4:
+            return int(round(((150 - 101) / (55.4 - 35.5)) * (pm25 - 35.5) + 101))
+        elif pm25 <= 150.4:
+            return int(round(((200 - 151) / (150.4 - 55.5)) * (pm25 - 55.5) + 151))
+        elif pm25 <= 250.4:
+            return int(round(((300 - 201) / (250.4 - 150.5)) * (pm25 - 150.5) + 201))
+        elif pm25 <= 350.4:
+            return int(round(((400 - 301) / (350.4 - 250.5)) * (pm25 - 250.5) + 301))
+        else:
+            return int(round(((500 - 401) / (500.4 - 350.5)) * (pm25 - 350.5) + 401))
     except:
         return None
 
@@ -602,8 +616,21 @@ else:
         lat = data['coord']['lat']
         lon = data['coord']['lon']
         aqi_val = get_aqi(lat, lon)
-        aqi_labels = {1: "Good", 2: "Fair", 3: "Moderate", 4: "Poor", 5: "Very Poor"}
-        aqi_desc = aqi_labels.get(aqi_val, "N/A")
+        if aqi_val is None:
+            aqi_desc = "N/A"
+        elif aqi_val <= 50:
+            aqi_desc = "Good"
+        elif aqi_val <= 100:
+            aqi_desc = "Moderate"
+        elif aqi_val <= 150:
+            aqi_desc = "Unhealthy for Sensitive Groups"
+        elif aqi_val <= 200:
+            aqi_desc = "Unhealthy"
+        elif aqi_val <= 300:
+            aqi_desc = "Very Unhealthy"
+        else:
+            aqi_desc = "Hazardous"
+            
         aqi_display = f"{aqi_val} ({aqi_desc})" if aqi_val is not None else "N/A"
 
-        st.markdown(f"""<div style="background: #89C2D9; border-radius: 15px; padding: 10px 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;"><div style="display: flex; gap: 20px; align-items: center;"><div style="display: flex; align-items: center; gap: 6px;"><img src="data:image/png;base64,{temperature_icon_new}" width="20" height="20"><span style="font-size: 16px; color: #333; white-space: nowrap;">Feels Like: <b>{int(data['main']['feels_like'])} °C</b></span></div><div style="border-left: 1px solid #eef2f6; height: 30px;"></div><div style="display: flex; align-items: center; gap: 6px;"><img src="data:image/png;base64,{cloud_icon_new}" width="20" height="20"><span style="font-size: 16px; color: #333; white-space: nowrap;">Cloud Cover: <b>{data['clouds']['all']}%</b></span></div><div style="border-left: 1px solid #eef2f6; height: 30px;"></div><div style="display: flex; align-items: center; gap: 6px;"><img src="data:image/png;base64,{windy_icon_new}" width="20" height="20"><span style="font-size: 16px; color: #333; white-space: nowrap;">AQI: <b>{aqi_display}</b></span></div></div>{warm_alert}</div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div style="background: #89C2D9; border-radius: 15px; padding: 10px 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;"><div style="display: flex; gap: 20px; align-items: center;"><div style="display: flex; align-items: center; gap: 6px;"><img src="data:image/png;base64,{temperature_icon_new}" width="25" height="25"><span style="font-size: 16px; color: #333; white-space: nowrap;">Feels Like: <b>{int(data['main']['feels_like'])} °C</b></span></div><div style="border-left: 1px solid #eef2f6; height: 30px;"></div><div style="display: flex; align-items: center; gap: 6px;"><img src="data:image/png;base64,{cloud_icon_new}" width="25" height="25"><span style="font-size: 16px; color: #333; white-space: nowrap;">Cloud Cover: <b>{data['clouds']['all']}%</b></span></div><div style="border-left: 1px solid #eef2f6; height: 30px;"></div><div style="display: flex; align-items: center; gap: 6px;"><img src="data:image/png;base64,{wind_icon}" width="25" height="25"><span style="font-size: 16px; color: #333; white-space: nowrap;">AQI: <b>{aqi_display}</b></span></div></div>{warm_alert}</div>""", unsafe_allow_html=True)
