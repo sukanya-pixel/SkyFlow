@@ -25,11 +25,11 @@ html, body {
     padding: 0 !important;
 }
 body {
-    background-color: #013A63;
+    background-color: #012A4A;
 }
 
 .stApp {
-    background-color: #013A63;
+    background-color: #012A4A;
     overflow: hidden !important;
     height: 100vh !important;
 }
@@ -189,6 +189,9 @@ def get_aqi(lat, lon):
 if "city" not in st.session_state:
     st.session_state.city = "Bhubaneswar"
 
+if "last_valid_city" not in st.session_state:
+    st.session_state.last_valid_city = "Bhubaneswar"
+
 if "search" not in st.session_state:
     st.session_state.search = False
 
@@ -231,6 +234,16 @@ div[data-testid="stTextInput"] input {
 div[data-testid="stTextInput"] input::placeholder {
     color: rgba(255, 255, 255, 0.6) !important;
     -webkit-text-fill-color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* autofill styling to prevent browser white background */
+div[data-testid="stTextInput"] input:-webkit-autofill,
+div[data-testid="stTextInput"] input:-webkit-autofill:hover, 
+div[data-testid="stTextInput"] input:-webkit-autofill:focus, 
+div[data-testid="stTextInput"] input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 1000px #012A4A inset !important;
+    -webkit-text-fill-color: white !important;
+    transition: background-color 5000s ease-in-out 0s;
 }
 
 /* DYNAMIC CARD HOVER EFFECT */
@@ -300,6 +313,8 @@ def submit_search():
     if new_city:
         st.session_state.city = new_city
         st.session_state.search = False  # Collapse back to icon after search
+        if 'weather_cache' in st.session_state:
+            del st.session_state.weather_cache
 
 if not st.session_state.search:
     col1, col2 = st.columns([15, 1])
@@ -418,13 +433,104 @@ with col2:
         </style>
         """, unsafe_allow_html=True)
         st.text_input("", placeholder="Search here...", key="search_input", on_change=submit_search, label_visibility="collapsed")
+        
+        # Hide the close button container using CSS
+        st.markdown("""
+        <style>
+        div[data-testid="stHorizontalBlock"]:has(.header-marker) div[data-testid="stElementContainer"]:has(button) {
+            display: none !important;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+        if st.button("close_search_btn", key="close_search_btn"):
+            st.session_state.search = False
+            st.rerun()
+
+        # Injected script via iframe to close on click outside (formatted with 0 leading indentation)
+        st.markdown("""<iframe style="display:none" srcdoc="
+<script>
+setTimeout(() => {
+    const parentDoc = window.parent.document;
+    
+    function handleClickOutside(e) {
+        const searchContainer = parentDoc.querySelector('div[data-testid=\\'stTextInput\\']');
+        if (!searchContainer) {
+            parentDoc.removeEventListener('click', handleClickOutside);
+            delete window.parent.__handleClickOutside;
+            return;
+        }
+        // If click is outside the search container
+        if (!searchContainer.contains(e.target)) {
+            const closeButton = Array.from(parentDoc.querySelectorAll('button')).find(btn => btn.textContent.includes('close_search_btn'));
+            if (closeButton) {
+                closeButton.click();
+            }
+            parentDoc.removeEventListener('click', handleClickOutside);
+            delete window.parent.__handleClickOutside;
+        }
+    }
+    
+    if (window.parent.__handleClickOutside) {
+        parentDoc.removeEventListener('click', window.parent.__handleClickOutside);
+    }
+    window.parent.__handleClickOutside = handleClickOutside;
+    parentDoc.addEventListener('click', handleClickOutside);
+}, 200);
+</script>
+"></iframe>""", unsafe_allow_html=True)
 
 
 city = st.session_state.city
 
 # ---------------- FETCH ----------------
-data = get_weather(city)
-forecast = get_forecast(city)
+import time
+
+cache_valid = False
+if 'weather_cache' in st.session_state and st.session_state.get('weather_cache_city') == city:
+    # Check if cache is older than 10 minutes (600 seconds)
+    if time.time() - st.session_state.get('weather_cache_time', 0) < 600:
+        cache_valid = True
+
+if not cache_valid:
+    try:
+        data = get_weather(city)
+        if str(data.get("cod")) != "200":
+            msg = data.get("message", "City not found").capitalize()
+            st.error(f"🔍 {msg}: '{city.title()}' not found. Please try another city.")
+            # Revert to last valid city so the user is not stuck on an invalid city
+            st.session_state.city = st.session_state.last_valid_city
+            st.stop()
+
+        forecast = get_forecast(city)
+        if str(forecast.get("cod")) != "200":
+            msg = forecast.get("message", "Error fetching forecast data").capitalize()
+            st.error(f"❌ Forecast Error: {msg}")
+            st.session_state.city = st.session_state.last_valid_city
+            st.stop()
+
+        lat = data['coord']['lat']
+        lon = data['coord']['lon']
+        aqi_val = get_aqi(lat, lon)
+        
+        st.session_state.weather_cache = {
+            'data': data,
+            'forecast': forecast,
+            'aqi_val': aqi_val
+        }
+        st.session_state.weather_cache_city = city
+        st.session_state.weather_cache_time = time.time()
+        st.session_state.last_valid_city = city  # Update last valid city on successful fetch
+    except requests.exceptions.RequestException as e:
+        st.error("🔌 Network Connection Error: Unable to connect to the weather service. Please check your internet connection.")
+        st.stop()
+    except (KeyError, TypeError, IndexError) as e:
+        st.error("❌ Data Error: The weather service returned unexpected or incomplete data format. Please try again later.")
+        st.stop()
+else:
+    data = st.session_state.weather_cache['data']
+    forecast = st.session_state.weather_cache['forecast']
+    aqi_val = st.session_state.weather_cache['aqi_val']
 
 if str(data.get("cod")) != "200":
     st.error("Error fetching weather")
@@ -528,7 +634,6 @@ else:
     r2c1, r2c2 = st.columns([1, 1.6], gap="large")
     
     with r2c1:
-        st.markdown('<div class="card-marker"></div>', unsafe_allow_html=True)
         tz_offset = datetime.timedelta(seconds=data['timezone'])
         
         # Collect raw points (timestamp, temp)
@@ -580,7 +685,16 @@ else:
         ax.tick_params(axis='y', length=0, pad=3, colors='#012A4A', labelsize=14)
         ax.set_ylabel('°C', color='#012A4A', fontsize=16, rotation=0, labelpad=15)
         fig.tight_layout(pad=1.5)
-        st.pyplot(fig)
+        
+        import io
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", bbox_inches='tight', facecolor=fig.get_facecolor())
+        img_b64 = base64.b64encode(buf.getvalue()).decode()
+        st.markdown(f"""
+        <div class="dynamic-card" style="background: #89C2D9; margin-top: 15px; padding: 20px; border-radius: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; width: 100%; box-sizing: border-box;">
+            <img src="data:image/png;base64,{img_b64}" style="width: 100%; height: 220px;">
+        </div>
+        """, unsafe_allow_html=True)
     with r2c2:
         st.markdown("<div style='margin-top:-10px;'></div>", unsafe_allow_html=True)
         html_boxes = "<div style='display:flex; gap:8px; justify-content:space-between;'>"
@@ -624,7 +738,6 @@ else:
             
         lat = data['coord']['lat']
         lon = data['coord']['lon']
-        aqi_val = get_aqi(lat, lon)
         if aqi_val is None:
             aqi_desc = "N/A"
         elif aqi_val <= 50:
