@@ -4,6 +4,8 @@ import datetime
 import matplotlib.pyplot as plt
 import base64
 import os
+import io
+import time
 from dotenv import load_dotenv
 import matplotlib.ticker as ticker
 
@@ -247,20 +249,12 @@ div[data-testid="stTextInput"] input:-webkit-autofill:active {
 }
 
 /* DYNAMIC CARD HOVER EFFECT */
-.dynamic-card, div[data-testid="column"]:has(.card-marker) {
+.dynamic-card {
     transition: transform 0.3s ease, box-shadow 0.3s ease !important;
 }
-.dynamic-card:hover, div[data-testid="column"]:has(.card-marker):hover {
+.dynamic-card:hover {
     transform: translateY(-5px) !important;
     box-shadow: 0 10px 25px rgba(0,0,0,0.2) !important;
-}
-
-/* MAIN CARDS CSS FIX */
-div[data-testid="column"]:has(.card-marker) {
-    background: white;
-    padding: 25px 40px !important;
-    border-radius: 25px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
 /* HEADER ROW CONTAINER (NO CARD) */
@@ -382,7 +376,7 @@ with col2:
         }}
         </style>
         """, unsafe_allow_html=True)
-        if st.button("", key="toggle_search_on"):
+        if st.button("Search", key="toggle_search_on"):
             st.session_state.search = True
             st.rerun()
     else:
@@ -432,7 +426,7 @@ with col2:
         }}
         </style>
         """, unsafe_allow_html=True)
-        st.text_input("", placeholder="Search here...", key="search_input", on_change=submit_search, label_visibility="collapsed")
+        st.text_input("Search City", placeholder="Search here...", key="search_input", on_change=submit_search, label_visibility="collapsed")
         
         # Hide the close button container using CSS
         st.markdown("""
@@ -447,38 +441,36 @@ with col2:
             st.session_state.search = False
             st.rerun()
 
-        # Injected script via iframe to close on click outside (formatted with 0 leading indentation)
-        st.markdown("""<iframe style="display:none" srcdoc="
+        # Injected script via st.html to close on click outside
+        st.html("""
 <script>
 setTimeout(() => {
-    const parentDoc = window.parent.document;
-    
     function handleClickOutside(e) {
-        const searchContainer = parentDoc.querySelector('div[data-testid=\\'stTextInput\\']');
+        const searchContainer = document.querySelector('div[data-testid="stTextInput"]');
         if (!searchContainer) {
-            parentDoc.removeEventListener('click', handleClickOutside);
-            delete window.parent.__handleClickOutside;
+            document.removeEventListener('click', handleClickOutside);
+            delete window.__handleClickOutside;
             return;
         }
         // If click is outside the search container
         if (!searchContainer.contains(e.target)) {
-            const closeButton = Array.from(parentDoc.querySelectorAll('button')).find(btn => btn.textContent.includes('close_search_btn'));
+            const closeButton = Array.from(document.querySelectorAll('button')).find(btn => btn.textContent.includes('close_search_btn'));
             if (closeButton) {
                 closeButton.click();
             }
-            parentDoc.removeEventListener('click', handleClickOutside);
-            delete window.parent.__handleClickOutside;
+            document.removeEventListener('click', handleClickOutside);
+            delete window.__handleClickOutside;
         }
     }
     
-    if (window.parent.__handleClickOutside) {
-        parentDoc.removeEventListener('click', window.parent.__handleClickOutside);
+    if (window.__handleClickOutside) {
+        document.removeEventListener('click', window.__handleClickOutside);
     }
-    window.parent.__handleClickOutside = handleClickOutside;
-    parentDoc.addEventListener('click', handleClickOutside);
+    window.__handleClickOutside = handleClickOutside;
+    document.addEventListener('click', handleClickOutside);
 }, 200);
 </script>
-"></iframe>""", unsafe_allow_html=True)
+""", unsafe_allow_javascript=True)
 
 
 city = st.session_state.city
@@ -532,237 +524,232 @@ else:
     forecast = st.session_state.weather_cache['forecast']
     aqi_val = st.session_state.weather_cache['aqi_val']
 
-if str(data.get("cod")) != "200":
-    st.error("Error fetching weather")
-else:
+# ---------------- MAIN CARDS ----------------
+col1, col2, col3 = st.columns([1.3, 1, 1], gap="large")
 
-    # ---------------- MAIN CARDS ----------------
-    col1, col2, col3 = st.columns([1.3, 1, 1], gap="large")
+# WEATHER CARD
+with col1:
+    icon = data['weather'][0]['icon']
+    icon_b64 = get_condition_image_base64(icon)
+    desc = data['weather'][0]['description'].title()
+    temp = int(data['main']['temp'])
+    forecast_temps = [item['main']['temp'] for item in forecast['list'][:8]]
+    temp_min = int(min(forecast_temps + [data['main']['temp']]))
+    temp_max = int(max(forecast_temps + [data['main']['temp']]))
+    pressure = data['main']['pressure']
+    visibility = data['visibility'] // 1000
+    humidity = data['main']['humidity']
+    precip_prob = int(forecast['list'][0].get('pop', 0) * 100)
+    st.markdown(f"""
+    <div class="dynamic-card" style="background: #89C2D9; padding: 25px 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); height: 230px; display: flex; flex-direction: column; justify-content: space-between;">
+        <div style="display: flex; justify-content: space-between;">
+            <div>
+                <div style="font-size: 50px; font-weight: bold; line-height: 1.1; color: #012A4A;">{temp}°<span style="font-size: 20px;">C</span></div>
+                <div style="font-size: 16px; margin-top: 1px; color: #012A4A; font-weight: 600;"><span style="color: #0d6efd;">▲</span> High: {temp_max}° &nbsp; <span style="color: #0d6efd;">▼</span> Low: {temp_min}°</div>
+                <div style="font-size: 18px; margin-top: 1px; color: #014F86;">{desc}</div>
+            </div>
+            <div>
+                <img src="data:image/png;base64,{icon_b64}" width="120" style="margin-top: -5px;">
+            </div>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+            <div class="dynamic-card" style="flex: 1; background: #014F86; border-radius: 8px; padding: 6px 4px; text-align: center; height: 62px; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 14px; color: #A9D6E5; white-space: nowrap;">Pressure</div>
+                <div style="font-size: 15px; color: white; font-weight: 800;">{pressure} mb</div>
+            </div>
+            <div class="dynamic-card" style="flex: 1; background: #014F86; border-radius: 8px; padding: 6px 4px; text-align: center; height: 62px; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 14px; color: #A9D6E5; white-space: nowrap;">Visibility</div>
+                <div style="font-size: 15px; color: white; font-weight: 800;">{visibility} km</div>
+            </div>
+            <div class="dynamic-card" style="flex: 1; background: #014F86; border-radius: 8px; padding: 6px 4px; text-align: center; height: 62px; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 14px; color: #A9D6E5; white-space: nowrap;">Humidity</div>
+                <div style="font-size: 15px; color: white; font-weight: 800;">{humidity}%</div>
+            </div>
+            <div class="dynamic-card" style="flex: 1; background: #014F86; border-radius: 8px; padding: 6px 4px; text-align: center; height: 62px; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 14px; color: #A9D6E5; white-space: nowrap;">Precipitation</div>
+                <div style="font-size: 15px; color: white; font-weight: 800;">{precip_prob}%</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+ 
+# WIND CARD
+with col2:
+    speed = data['wind']['speed']
+    pct = min(int(speed * 10), 100)
+    st.markdown(f"""
+    <div class="dynamic-card" style="background: #89C2D9; padding: 25px 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); height: 230px; display: flex; flex-direction: column;">
+        <div style="font-weight: 600; font-size: 18px; margin-bottom: 10px; color: #014F86; display: flex; align-items: center; gap: 8px;"><img src="data:image/png;base64,{wind_icon}" width="30"> Wind Info</div>
+        <div style="font-size: 34px; margin-top: 10px; font-weight: bold; color: #012A4A; line-height: 1;">{speed} <span style="font-size: 18px; font-weight: 500;">m/s</span></div>
+        <div style="font-size: 16px; margin-top: 20px; margin-bottom: 4px; color: #014F86;">Wind Speed</div>
+        <div style="width: 100%; margin-top: 5px; background-color: #e9ecef; border-radius: 4px; height: 10px; margin-bottom: 6px;">
+            <div style="width: {pct}%; background-color: #01497C; height: 10px; border-radius: 4px;"></div>
+        </div>
+        <div style="font-size: 16px; margin-top: 5px; font-weight: 600; color: #012A4A;">{pct}%</div>
+    </div>
+    """, unsafe_allow_html=True)
+ 
+# SUN CARD
+with col3:
+    sunrise = datetime.datetime.fromtimestamp(data['sys']['sunrise']).strftime('%H:%M')
+    sunset = datetime.datetime.fromtimestamp(data['sys']['sunset']).strftime('%H:%M')
+     
+    st.markdown(f"""
+    <div class="dynamic-card" style="background: #89C2D9; padding: 25px 40px; border-radius: 16px; height: 230px; display: flex; flex-direction: column; justify-content: center;">
+        <div>
+            <div style="font-size: 18px; margin-bottom: 4px; font-weight: 500; color: #014F86; display: flex; align-items: center; gap: 8px;"><img src="data:image/png;base64,{sunrise_icon}" width="30"> Sunrise:</div>
+            <div style="font-size: 26px; font-weight: bold; padding-left: 28px; color: #012A4A;">{sunrise}</div>
+        </div>
+        <hr style="margin: 10px 0; border: none; border-top: 1px solid #eee;">
+        <div>
+            <div style="font-size: 18px; margin-bottom: 4px; font-weight: 500; color: #014F86; display: flex; align-items: center; gap: 8px;"><img src="data:image/png;base64,{sunset_icon}" width="30"> Sunset:</div>
+            <div style="font-size: 26px; font-weight: bold; padding-left: 28px; color: #012A4A;">{sunset}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # WEATHER CARD
-    with col1:
-        icon = data['weather'][0]['icon']
+# ---------------- GRAPH & FORECAST ROW ----------------
+st.markdown("<div style='height:5px;'></div>", unsafe_allow_html=True)
+
+t1, t2 = st.columns([1, 1.6], gap="large")
+with t1:
+    st.markdown(f"<div style='display:flex; align-items:center; gap:8px; font-weight: 600; font-size: 20px; color: White; margin-bottom: -20px;'><img src='data:image/png;base64,{bar_graph_icon}' width='30' height='30'><span>Temperature Trend (Next 24 Hours)</span></div>", unsafe_allow_html=True)
+with t2:
+    st.markdown(f"<div style='display:flex; align-items:center; gap:8px; font-weight: 600; font-size: 20px; color: White; margin-bottom: -20px;'><img src='data:image/png;base64,{calendar_icon}' width='30' height='30'><span>7-Day Forecast</span></div>", unsafe_allow_html=True)
+    
+st.markdown("<div style='height:5px;'></div>", unsafe_allow_html=True)
+
+r2c1, r2c2 = st.columns([1, 1.6], gap="large")
+
+with r2c1:
+    tz_offset = datetime.timedelta(seconds=data['timezone'])
+    
+    # Collect raw points (timestamp, temp)
+    raw_points = [(data['dt'], data['main']['temp'])]
+    for item in forecast['list']:
+        if item['dt'] > data['dt']:
+            raw_points.append((item['dt'], item['main']['temp']))
+            if len(raw_points) >= 8:
+                break
+                
+    # Linearly interpolate a point in between each consecutive pair
+    interpolated_points = []
+    for i in range(len(raw_points)):
+        interpolated_points.append(raw_points[i])
+        if i < len(raw_points) - 1:
+            dt1, temp1 = raw_points[i]
+            dt2, temp2 = raw_points[i+1]
+            mid_dt = (dt1 + dt2) / 2
+            mid_temp = (temp1 + temp2) / 2
+            interpolated_points.append((mid_dt, mid_temp))
+            
+    temps = []
+    tick_positions = []
+    tick_labels = []
+    
+    for idx, (dt, temp) in enumerate(interpolated_points):
+        temps.append(temp)
+        if idx % 2 == 0:
+            time_local = datetime.datetime.fromtimestamp(dt, datetime.timezone.utc) + tz_offset
+            tick_labels.append(time_local.strftime('%H:%M'))
+            tick_positions.append(idx)
+        
+    fig, ax = plt.subplots(figsize=(8,4.3))
+    ax.plot(range(len(temps)), temps, marker='o', color='#0d6efd', linewidth=2)
+    ax.margins(x=0.05, y=0.15)
+    ax.set_facecolor('#89C2D9')
+    fig.patch.set_facecolor('#89C2D9')
+    ax.grid(axis='y', linestyle='-', alpha=0.3)
+    ax.grid(axis='x', linestyle='-', alpha=0.3)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['bottom'].set_color('#89C2D9')
+    ax.set_xticks(tick_positions)
+    ax.set_xticklabels(tick_labels, fontsize=14, color='#012A4A')
+    ax.tick_params(axis='x', length=0, pad=2, colors='#012A4A', labelsize=14)
+    ax.yaxis.set_major_locator(plt.MaxNLocator(nbins=6))
+    plt.yticks(fontsize=14, color='#012A4A')
+    ax.tick_params(axis='y', length=0, pad=3, colors='#012A4A', labelsize=14)
+    ax.set_ylabel('°C', color='#012A4A', fontsize=16, rotation=0, labelpad=15)
+    fig.tight_layout(pad=1.5)
+    
+    buf = io.BytesIO()
+    fig.savefig(buf, format="png", bbox_inches='tight', facecolor=fig.get_facecolor())
+    img_b64 = base64.b64encode(buf.getvalue()).decode()
+    st.markdown(f"""
+    <div class="dynamic-card" style="background: #89C2D9; margin-top: 15px; padding: 20px; border-radius: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; width: 100%; box-sizing: border-box;">
+        <img src="data:image/png;base64,{img_b64}" style="width: 100%; height: 220px;">
+    </div>
+    """, unsafe_allow_html=True)
+with r2c2:
+    st.markdown("<div style='margin-top:-10px;'></div>", unsafe_allow_html=True)
+    html_boxes = "<div style='display:flex; gap:8px; justify-content:space-between;'>"
+    num_days_available = len(forecast['list']) // 8
+    for i in range(7):
+        if i < num_days_available:
+            d = forecast['list'][i*8]
+            dt_obj = datetime.datetime.strptime(d['dt_txt'], '%Y-%m-%d %H:%M:%S')
+            temp = int(d['main']['temp'])
+            desc = d['weather'][0]['main']
+            icon = d['weather'][0]['icon']
+        else:
+            # Extrapolate for Day 6 and Day 7
+            d = forecast['list'][(num_days_available - 1) * 8]
+            base_dt = datetime.datetime.strptime(d['dt_txt'], '%Y-%m-%d %H:%M:%S')
+            dt_obj = base_dt + datetime.timedelta(days=i - (num_days_available - 1))
+            temp = int(d['main']['temp'] + (1 if i == 5 else -1))
+            desc = d['weather'][0]['main']
+            icon = d['weather'][0]['icon']
+            
+        date_str = dt_obj.strftime('%d %b')
         icon_b64 = get_condition_image_base64(icon)
-        desc = data['weather'][0]['description'].title()
-        temp = int(data['main']['temp'])
-        forecast_temps = [item['main']['temp'] for item in forecast['list'][:8]]
-        temp_min = int(min(forecast_temps + [data['main']['temp']]))
-        temp_max = int(max(forecast_temps + [data['main']['temp']]))
-        pressure = data['main']['pressure']
-        visibility = data['visibility'] // 1000
-        humidity = data['main']['humidity']
-        precip_prob = int(forecast['list'][0].get('pop', 0) * 100)
-        st.markdown(f"""
-        <div class="dynamic-card" style="background: #89C2D9; padding: 25px 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); height: 230px; display: flex; flex-direction: column; justify-content: space-between;">
-            <div style="display: flex; justify-content: space-between;">
-                <div>
-                    <div style="font-size: 50px; font-weight: bold; line-height: 1.1; color: #012A4A;">{temp}°<span style="font-size: 20px;">C</span></div>
-                    <div style="font-size: 16px; margin-top: 1px; color: #012A4A; font-weight: 600;"><span style="color: #0d6efd;">▲</span> High: {temp_max}° &nbsp; <span style="color: #0d6efd;">▼</span> Low: {temp_min}°</div>
-                    <div style="font-size: 18px; margin-top: 1px; color: #014F86;">{desc}</div>
-                </div>
-                <div>
-                    <img src="data:image/png;base64,{icon_b64}" width="120" style="margin-top: -5px;">
-                </div>
-            </div>
-            <div style="display: flex; gap: 8px; margin-top: 10px;">
-                <div class="dynamic-card" style="flex: 1; background: #014F86; border-radius: 8px; padding: 6px 4px; text-align: center; height: 62px; display: flex; flex-direction: column; justify-content: center;">
-                    <div style="font-size: 14px; color: #A9D6E5; white-space: nowrap;">Pressure</div>
-                    <div style="font-size: 15px; color: white; font-weight: 800;">{pressure} mb</div>
-                </div>
-                <div class="dynamic-card" style="flex: 1; background: #014F86; border-radius: 8px; padding: 6px 4px; text-align: center; height: 62px; display: flex; flex-direction: column; justify-content: center;">
-                    <div style="font-size: 14px; color: #A9D6E5; white-space: nowrap;">Visibility</div>
-                    <div style="font-size: 15px; color: white; font-weight: 800;">{visibility} km</div>
-                </div>
-                <div class="dynamic-card" style="flex: 1; background: #014F86; border-radius: 8px; padding: 6px 4px; text-align: center; height: 62px; display: flex; flex-direction: column; justify-content: center;">
-                    <div style="font-size: 14px; color: #A9D6E5; white-space: nowrap;">Humidity</div>
-                    <div style="font-size: 15px; color: white; font-weight: 800;">{humidity}%</div>
-                </div>
-                <div class="dynamic-card" style="flex: 1; background: #014F86; border-radius: 8px; padding: 6px 4px; text-align: center; height: 62px; display: flex; flex-direction: column; justify-content: center;">
-                    <div style="font-size: 14px; color: #A9D6E5; white-space: nowrap;">Precipitation</div>
-                    <div style="font-size: 15px; color: white; font-weight: 800;">{precip_prob}%</div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
- 
-    # WIND CARD
-    with col2:
-        speed = data['wind']['speed']
-        pct = min(int(speed * 10), 100)
-        st.markdown(f"""
-        <div class="dynamic-card" style="background: #89C2D9; padding: 25px 40px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); height: 230px; display: flex; flex-direction: column;">
-            <div style="font-weight: 600; font-size: 18px; margin-bottom: 10px; color: #014F86; display: flex; align-items: center; gap: 8px;"><img src="data:image/png;base64,{wind_icon}" width="30"> Wind Info</div>
-            <div style="font-size: 34px; margin-top: 10px; font-weight: bold; color: #012A4A; line-height: 1;">{speed} <span style="font-size: 18px; font-weight: 500;">m/s</span></div>
-            <div style="font-size: 16px; margin-top: 20px; margin-bottom: 4px; color: #014F86;">Wind Speed</div>
-            <div style="width: 100%; margin-top: 5px; background-color: #e9ecef; border-radius: 4px; height: 10px; margin-bottom: 6px;">
-                <div style="width: {pct}%; background-color: #01497C; height: 10px; border-radius: 4px;"></div>
-            </div>
-            <div style="font-size: 16px; margin-top: 5px; font-weight: 600; color: #012A4A;">{pct}%</div>
-        </div>
-        """, unsafe_allow_html=True)
- 
-    # SUN CARD
-    with col3:
-        sunrise = datetime.datetime.fromtimestamp(data['sys']['sunrise']).strftime('%H:%M')
-        sunset = datetime.datetime.fromtimestamp(data['sys']['sunset']).strftime('%H:%M')
-         
-        st.markdown(f"""
-        <div class="dynamic-card" style="background: #89C2D9; padding: 25px 40px; border-radius: 16px; height: 230px; display: flex; flex-direction: column; justify-content: center;">
-            <div>
-                <div style="font-size: 18px; margin-bottom: 4px; font-weight: 500; color: #014F86; display: flex; align-items: center; gap: 8px;"><img src="data:image/png;base64,{sunrise_icon}" width="30"> Sunrise:</div>
-                <div style="font-size: 26px; font-weight: bold; padding-left: 28px; color: #012A4A;">{sunrise}</div>
-            </div>
-            <hr style="margin: 10px 0; border: none; border-top: 1px solid #eee;">
-            <div>
-                <div style="font-size: 18px; margin-bottom: 4px; font-weight: 500; color: #014F86; display: flex; align-items: center; gap: 8px;"><img src="data:image/png;base64,{sunset_icon}" width="30"> Sunset:</div>
-                <div style="font-size: 26px; font-weight: bold; padding-left: 28px; color: #012A4A;">{sunset}</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+        html_boxes += f"""<div class="dynamic-card" style="flex:1; height:130px; display:flex; flex-direction:column; justify-content:space-between; background:#89c2d9; padding:8px 5px; border-radius:12px; text-align:center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); box-sizing:border-box;">
+                        <div style="font-size:14px; color:#01497C; font-weight:600;">{date_str}</div>
+                        <div><img src="data:image/png;base64,{icon_b64}" width="30"></div>
+                        <div style="font-weight:bold; color:#012A4A; font-size:18px;">{temp}°C</div>
+                        <div style="font-size:14px; color:#014F86; font-weight:500;">{desc}</div>
+                    </div>"""
+    html_boxes += "</div>"
+    st.markdown(html_boxes, unsafe_allow_html=True)
 
-    # ---------------- GRAPH & FORECAST ROW ----------------
+    # ---------------- EXTRA ----------------
     st.markdown("<div style='height:5px;'></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='display:flex; align-items:center; gap:8px; font-weight: 600; font-size: 20px; color: White; margin-bottom: 10px;'><img src='data:image/png;base64,{earth_icon}' width='30' height='30'><span>Additional Details</span></div>", unsafe_allow_html=True)
     
-    t1, t2 = st.columns([1, 1.6], gap="large")
-    with t1:
-        st.markdown(f"<div style='display:flex; align-items:center; gap:8px; font-weight: 600; font-size: 20px; color: White; margin-bottom: -20px;'><img src='data:image/png;base64,{bar_graph_icon}' width='30' height='30'><span>Temperature Trend (Next 24 Hours)</span></div>", unsafe_allow_html=True)
-    with t2:
-        st.markdown(f"<div style='display:flex; align-items:center; gap:8px; font-weight: 600; font-size: 20px; color: White; margin-bottom: -20px;'><img src='data:image/png;base64,{calendar_icon}' width='30' height='30'><span>7-Day Forecast</span></div>", unsafe_allow_html=True)
+    warm_alert = ""
+    if data['main']['temp'] > 30:
+        warm_alert = "<div style='background: #fff9e6; border: 1px solid #ffeeba; border-radius: 12px; padding: 12px 15px; color: #856404; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.02); width: 250px; box-sizing: border-box; height: 44px;'><svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='#ff9800' class='bi bi-exclamation-triangle-fill' viewBox='0 0 16 16'><path d='M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2'/></svg><span>Warm Alert: Stay hydrated!</span></div>"
+    else:
+        warm_alert = "<div style='width: 260px; height: 44px; visibility: hidden;'></div>"
         
-    st.markdown("<div style='height:5px;'></div>", unsafe_allow_html=True)
+    lat = data['coord']['lat']
+    lon = data['coord']['lon']
+    if aqi_val is None:
+        aqi_desc = "N/A"
+    elif aqi_val <= 50:
+        aqi_desc = "Good"
+    elif aqi_val <= 100:
+        aqi_desc = "Moderate"
+    elif aqi_val <= 300:
+        aqi_desc = "Unhealthy"
+    else:
+        aqi_desc = "Hazardous"
+        
+    aqi_display = f"{aqi_val} ({aqi_desc})" if aqi_val is not None else "N/A"
 
-    r2c1, r2c2 = st.columns([1, 1.6], gap="large")
-    
-    with r2c1:
-        tz_offset = datetime.timedelta(seconds=data['timezone'])
-        
-        # Collect raw points (timestamp, temp)
-        raw_points = [(data['dt'], data['main']['temp'])]
-        for item in forecast['list']:
-            if item['dt'] > data['dt']:
-                raw_points.append((item['dt'], item['main']['temp']))
-                if len(raw_points) >= 8:
-                    break
-                    
-        # Linearly interpolate a point in between each consecutive pair
-        interpolated_points = []
-        for i in range(len(raw_points)):
-            interpolated_points.append(raw_points[i])
-            if i < len(raw_points) - 1:
-                dt1, temp1 = raw_points[i]
-                dt2, temp2 = raw_points[i+1]
-                mid_dt = (dt1 + dt2) / 2
-                mid_temp = (temp1 + temp2) / 2
-                interpolated_points.append((mid_dt, mid_temp))
-                
-        temps = []
-        tick_positions = []
-        tick_labels = []
-        
-        for idx, (dt, temp) in enumerate(interpolated_points):
-            temps.append(temp)
-            if idx % 2 == 0:
-                time_local = datetime.datetime.fromtimestamp(dt, datetime.timezone.utc) + tz_offset
-                tick_labels.append(time_local.strftime('%H:%M'))
-                tick_positions.append(idx)
-            
-        fig, ax = plt.subplots(figsize=(8,4.3))
-        ax.plot(range(len(temps)), temps, marker='o', color='#0d6efd', linewidth=2)
-        ax.margins(x=0.05, y=0.15)
-        ax.set_facecolor('#89C2D9')
-        fig.patch.set_facecolor('#89C2D9')
-        ax.grid(axis='y', linestyle='-', alpha=0.3)
-        ax.grid(axis='x', linestyle='-', alpha=0.3)
-        ax.spines['top'].set_visible(False)
-        ax.spines['right'].set_visible(False)
-        ax.spines['left'].set_visible(False)
-        ax.spines['bottom'].set_color('#89C2D9')
-        ax.set_xticks(tick_positions)
-        ax.set_xticklabels(tick_labels, fontsize=14, color='#012A4A')
-        ax.tick_params(axis='x', length=0, pad=2, colors='#012A4A', labelsize=14)
-        ax.yaxis.set_major_locator(plt.MaxNLocator(nbins=6))
-        plt.yticks(fontsize=14, color='#012A4A')
-        ax.tick_params(axis='y', length=0, pad=3, colors='#012A4A', labelsize=14)
-        ax.set_ylabel('°C', color='#012A4A', fontsize=16, rotation=0, labelpad=15)
-        fig.tight_layout(pad=1.5)
-        
-        import io
-        buf = io.BytesIO()
-        fig.savefig(buf, format="png", bbox_inches='tight', facecolor=fig.get_facecolor())
-        img_b64 = base64.b64encode(buf.getvalue()).decode()
-        st.markdown(f"""
-        <div class="dynamic-card" style="background: #89C2D9; margin-top: 15px; padding: 20px; border-radius: 25px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; width: 100%; box-sizing: border-box;">
-            <img src="data:image/png;base64,{img_b64}" style="width: 100%; height: 220px;">
-        </div>
-        """, unsafe_allow_html=True)
-    with r2c2:
-        st.markdown("<div style='margin-top:-10px;'></div>", unsafe_allow_html=True)
-        html_boxes = "<div style='display:flex; gap:8px; justify-content:space-between;'>"
-        num_days_available = len(forecast['list']) // 8
-        for i in range(7):
-            if i < num_days_available:
-                d = forecast['list'][i*8]
-                dt_obj = datetime.datetime.strptime(d['dt_txt'], '%Y-%m-%d %H:%M:%S')
-                temp = int(d['main']['temp'])
-                desc = d['weather'][0]['main']
-                icon = d['weather'][0]['icon']
-            else:
-                # Extrapolate for Day 6 and Day 7
-                d = forecast['list'][(num_days_available - 1) * 8]
-                base_dt = datetime.datetime.strptime(d['dt_txt'], '%Y-%m-%d %H:%M:%S')
-                dt_obj = base_dt + datetime.timedelta(days=i - (num_days_available - 1))
-                temp = int(d['main']['temp'] + (1 if i == 5 else -1))
-                desc = d['weather'][0]['main']
-                icon = d['weather'][0]['icon']
-                
-            date_str = dt_obj.strftime('%d %b')
-            icon_b64 = get_condition_image_base64(icon)
-            html_boxes += f"""<div class="dynamic-card" style="flex:1; height:130px; display:flex; flex-direction:column; justify-content:space-between; background:#89c2d9; padding:8px 5px; border-radius:12px; text-align:center; box-shadow: 0 4px 12px rgba(0,0,0,0.05); box-sizing:border-box;">
-                            <div style="font-size:14px; color:#01497C; font-weight:600;">{date_str}</div>
-                            <div><img src="data:image/png;base64,{icon_b64}" width="30"></div>
-                            <div style="font-weight:bold; color:#012A4A; font-size:18px;">{temp}°C</div>
-                            <div style="font-size:14px; color:#014F86; font-weight:500;">{desc}</div>
-                        </div>"""
-        html_boxes += "</div>"
-        st.markdown(html_boxes, unsafe_allow_html=True)
-
-        # ---------------- EXTRA ----------------
-        st.markdown("<div style='height:5px;'></div>", unsafe_allow_html=True)
-        st.markdown(f"<div style='display:flex; align-items:center; gap:8px; font-weight: 600; font-size: 20px; color: White; margin-bottom: 10px;'><img src='data:image/png;base64,{earth_icon}' width='30' height='30'><span>Additional Details</span></div>", unsafe_allow_html=True)
-        
-        warm_alert = ""
-        if data['main']['temp'] > 30:
-            warm_alert = "<div style='background: #fff9e6; border: 1px solid #ffeeba; border-radius: 12px; padding: 12px 15px; color: #856404; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.02); width: 250px; box-sizing: border-box; height: 44px;'><svg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='#ff9800' class='bi bi-exclamation-triangle-fill' viewBox='0 0 16 16'><path d='M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2'/></svg><span>Warm Alert: Stay hydrated!</span></div>"
-        else:
-            warm_alert = "<div style='width: 260px; height: 44px; visibility: hidden;'></div>"
-            
-        lat = data['coord']['lat']
-        lon = data['coord']['lon']
-        if aqi_val is None:
-            aqi_desc = "N/A"
-        elif aqi_val <= 50:
-            aqi_desc = "Good"
-        elif aqi_val <= 100:
-            aqi_desc = "Moderate"
-        elif aqi_val <= 300:
-            aqi_desc = "Unhealthy"
-        else:
-            aqi_desc = "Hazardous"
-            
-        aqi_display = f"{aqi_val} ({aqi_desc})" if aqi_val is not None else "N/A"
-
-        st.markdown(f"""
-        <div class="dynamic-card" style="background: #89C2D9; border-radius: 15px; padding: 10px 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
-        <div style="display: flex; gap: 10px; align-items: center;">
-        <div style="display: flex; align-items: center; gap: 6px;">
-        <img src="data:image/png;base64,{temperature_icon_new}" width="25" height="25">
-        <span style="font-size: 16px; color: #333; white-space: nowrap;">Feels Like: <b>{int(data['main']['feels_like'])} °C</b></span></div>
-        <div style="border-left: 1px solid #eef2f6; height: 30px;"></div>
-        <div style="display: flex; align-items: center; gap: 6px;">
-        <img src="data:image/png;base64,{cloud_icon_new}" width="25" height="25">
-        <span style="font-size: 16px; color: #333; white-space: nowrap;">Cloud Cover: <b>{data['clouds']['all']}%</b></span></div>
-        <div style="border-left: 1px solid #eef2f6; height: 30px;">
-        </div><div style="display: flex; align-items: center; gap: 6px;">
-        <img src="data:image/png;base64,{wind_icon}" width="25" height="25">
-        <span style="font-size: 16px; color: #333; white-space: nowrap;">AQI: <b>{aqi_display}</b></span></div></div>{warm_alert}</div>
-        """, unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class="dynamic-card" style="background: #89C2D9; border-radius: 15px; padding: 10px 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
+    <div style="display: flex; gap: 10px; align-items: center;">
+    <div style="display: flex; align-items: center; gap: 6px;">
+    <img src="data:image/png;base64,{temperature_icon_new}" width="25" height="25">
+    <span style="font-size: 16px; color: #333; white-space: nowrap;">Feels Like: <b>{int(data['main']['feels_like'])} °C</b></span></div>
+    <div style="border-left: 1px solid #eef2f6; height: 30px;"></div>
+    <div style="display: flex; align-items: center; gap: 6px;">
+    <img src="data:image/png;base64,{cloud_icon_new}" width="25" height="25">
+    <span style="font-size: 16px; color: #333; white-space: nowrap;">Cloud Cover: <b>{data['clouds']['all']}%</b></span></div>
+    <div style="border-left: 1px solid #eef2f6; height: 30px;">
+    </div><div style="display: flex; align-items: center; gap: 6px;">
+    <img src="data:image/png;base64,{wind_icon}" width="25" height="25">
+    <span style="font-size: 16px; color: #333; white-space: nowrap;">AQI: <b>{aqi_display}</b></span></div></div>{warm_alert}</div>
+    """, unsafe_allow_html=True)
